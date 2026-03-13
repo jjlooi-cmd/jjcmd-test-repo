@@ -133,7 +133,7 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
 	responseBizMsgId := responseBusinessMessageId(origBizMsgId, creditorBic)
 	// transactionId per spec: same as originalBusinessMessageId (request's businessMessageId from RPP).
-	transactionId := origBizMsgId
+	// transactionId := origBizMsgId
 	interbankSettlementDate := time.Now().Format("2006-01-02")
 	return TransferResponse{
 		AppHeader: ResponseAppHeader{
@@ -141,17 +141,18 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 			BusinessMessageId:         responseBizMsgId,
 			CreationDateTime:          req.AppHeader.CreationDateTime,
 			OriginalBusinessMessageId: origBizMsgId,
-			TransactionId:             transactionId,
+			// TransactionId:             transactionId,
+			TransactionId: "20260313PICAMYK1030OQR07712250",
 		},
 		Data: ResponseData{
 			QR: ResponseQR{
 				Category:              CategoryPointOfSales,
 				AcceptedSourceOfFunds: AcceptedSourceOfFundsDefault,
 			},
-			SettlementCycleNumber:  "001",
+			SettlementCycleNumber:   "001",
 			InterbankSettlementDate: interbankSettlementDate,
 			// Creditor:               ResponseCreditor{Name: creditorName},
-			Creditor:               ResponseCreditor{Name: "Jane Smith"},
+			Creditor: ResponseCreditor{Name: "Jane Smith"},
 			CreditorAccount: ResponseCreditorAccount{
 				Id:                req.CreditorAccount.Id,
 				Type:              orDefault(req.CreditorAccount.Type, "WALLET"),
@@ -166,7 +167,7 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 			// Status: txnStatus,
 			Status: TransactionStatusACSP,
 			Reason: ResponseReason{
-				Name:        reasonName,
+				Name: reasonName,
 				// Code:        reasonCode,
 				Code:        "00",
 				Description: reasonDescription,
