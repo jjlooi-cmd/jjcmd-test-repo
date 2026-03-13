@@ -10,6 +10,7 @@ import (
 // Handler implements POST /webhooks/v3/accounts/enquire-xc for PayNet QR MPM Domestic Acquirer.
 // Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/acquirer/domestic#/webhooks/webhooks-v3-accounts-enquire-xc/post
 func Handler(w http.ResponseWriter, r *http.Request) {
+	log.Printf("[account_enquire_xc] Incoming request Authorization (token): %s", r.Header.Get("Authorization"))
 	if r.Method != http.MethodPost {
 		setPayNetResponseHeaders(w, r, "")
 		writeJSON(w, http.StatusMethodNotAllowed, actualResponse(EnquireRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "POST required", "", nil, ""))
@@ -119,11 +120,11 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 			CreditorAccount: ResponseCreditorAccount{
 				Id:                req.CreditorAccount.Id,
 				Type:              req.CreditorAccount.Type,
-				ResidentStatus:    "",
-				ProductType:       "",
-				ShariaCompliance:  "",
-				AccountHolderType: "",
-				CustomerCategory:  "",
+				ResidentStatus:    "RESIDENT",
+				ProductType:       "ISLAMIC",
+				ShariaCompliance:  "YES",
+				AccountHolderType: "SINGLE",
+				CustomerCategory:  "RET",
 			},
 		},
 		Resp: ResponseStatus{
@@ -140,6 +141,7 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 // setPayNetResponseHeaders sets mandatory response headers for PayNet webhook (echo from request where applicable).
 func setPayNetResponseHeaders(w http.ResponseWriter, r *http.Request, businessMessageId string) {
 	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Authorization", "Bearer x")
 	if v := r.Header.Get("X-Client-Id"); v != "" {
 		w.Header().Set("X-Client-Id", v)
 	}
@@ -155,6 +157,7 @@ func writeJSON(w http.ResponseWriter, statusCode int, body interface{}) {
 	bodyBytes, _ := json.MarshalIndent(body, "", "  ")
 	log.Printf("[account_enquire_xc] --- Outgoing response ---")
 	log.Printf("[account_enquire_xc] HTTP %d", statusCode)
+	log.Printf("[account_enquire_xc] Authorization (outgoing token): %s", w.Header().Get("Authorization"))
 	log.Printf("[account_enquire_xc] Response Headers:")
 	for k, v := range w.Header() {
 		log.Printf("[account_enquire_xc]   %s: %s", k, strings.Join(v, ", "))
