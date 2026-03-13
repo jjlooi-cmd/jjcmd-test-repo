@@ -9,13 +9,17 @@ const (
 
 // PayNet API spec values per https://docs.developer.paynet.my/docs/duitNow-QR/response-codes
 const (
-	ReasonCodeAccepted       = "U000"   // Success/Transaction Accepted (with ACSP)
-	ReasonCodeMissingField   = "API.005" // Missing mandatory field
-	ReasonCodeInvalidBody    = "API.001" // Invalid request body / message validation
-	ReasonCodeNameAccepted   = "ACCEPTED"
-	ReasonCodeNameValidation = "MESSAGE_VALIDATION_ERROR"
+	ReasonCodeAccepted        = "U000"    // Success/Transaction Accepted (with ACSP)
+	ReasonCodeMissingField    = "API.005" // Missing mandatory field
+	ReasonCodeInvalidBody     = "API.001" // Invalid request body / message validation
+	ReasonCodeNameAccepted    = "ACCEPTED"
+	ReasonCodeNameValidation  = "MESSAGE_VALIDATION_ERROR"
 	ReasonDescriptionAccepted = "Success/ Transaction Accepted"
+	CategoryPointOfSales      = "POINT_OF_SALES"
 )
+
+// AcceptedSourceOfFunds default per API reference response.
+var AcceptedSourceOfFundsDefault = []string{"CASA", "CREDIT_CARD", "WALLET"}
 
 // TransferRequest is the incoming webhook payload for POST /webhooks/v3/payments/transfer-xc.
 // Schema from PayNet Merchant Presented QR Domestic - Acquirer API (payments transfer).
@@ -80,15 +84,48 @@ type InstructedAmount struct {
 // Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/acquirer/domestic#/webhooks/webhooks-v3-payments-transfer-xc/post#response-body
 type TransferResponse struct {
 	AppHeader ResponseAppHeader `json:"appHeader"`
+	Data      ResponseData      `json:"data"`
 	Resp      ResponseStatus    `json:"resp"`
 }
 
-// ResponseAppHeader - appHeader in response; originalBusinessMessageId = request's businessMessageId.
+// ResponseAppHeader - appHeader in response; transactionId and originalBusinessMessageId from request.
 type ResponseAppHeader struct {
 	EndToEndId                string `json:"endToEndId"`
-	BusinessMessageId        string `json:"businessMessageId"`
-	CreationDateTime         string `json:"creationDateTime"`
+	BusinessMessageId         string `json:"businessMessageId"`
+	CreationDateTime          string `json:"creationDateTime"`
 	OriginalBusinessMessageId string `json:"originalBusinessMessageId"`
+	TransactionId             string `json:"transactionId"`
+}
+
+// ResponseData - data block with qr, settlement, creditor, creditorAccount.
+type ResponseData struct {
+	QR                     ResponseQR              `json:"qr"`
+	SettlementCycleNumber  string                  `json:"settlementCycleNumber"`
+	InterbankSettlementDate string                  `json:"interbankSettlementDate"`
+	Creditor               ResponseCreditor        `json:"creditor"`
+	CreditorAccount        ResponseCreditorAccount `json:"creditorAccount"`
+}
+
+// ResponseQR - category and acceptedSourceOfFunds.
+type ResponseQR struct {
+	Category              string   `json:"category"`
+	AcceptedSourceOfFunds []string `json:"acceptedSourceOfFunds"`
+}
+
+// ResponseCreditor - creditor name in response.
+type ResponseCreditor struct {
+	Name string `json:"name"`
+}
+
+// ResponseCreditorAccount - full creditor account in response (per API spec).
+type ResponseCreditorAccount struct {
+	Id                string `json:"id"`
+	Type              string `json:"type"`
+	ResidentStatus    string `json:"residentStatus"`
+	ProductType       string `json:"productType"`
+	ShariaCompliance  string `json:"shariaCompliance"`
+	AccountHolderType string `json:"accountHolderType"`
+	CustomerCategory  string `json:"customerCategory"`
 }
 
 // ResponseStatus - resp block with status and reason.

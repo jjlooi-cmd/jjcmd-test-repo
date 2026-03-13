@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"example.com/sample-repo/jws_generation"
 )
@@ -15,7 +16,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[payments_transfer_xc] Incoming request Authorization (token): %s", r.Header.Get("Authorization"))
 	if r.Method != http.MethodPost {
 		setPayNetResponseHeaders(w, r, "")
-		writeJSON(w, http.StatusMethodNotAllowed, buildTransferResponse(TransferRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "POST required"))
+		writeJSON(w, http.StatusMethodNotAllowed, buildTransferResponse(TransferRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "POST required", ""))
 		return
 	}
 
@@ -23,7 +24,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[payments_transfer_xc] invalid JSON: %v", err)
 		setPayNetResponseHeaders(w, r, "")
-		writeJSON(w, http.StatusBadRequest, buildTransferResponse(TransferRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "Request body must be valid JSON"))
+		writeJSON(w, http.StatusBadRequest, buildTransferResponse(TransferRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "Request body must be valid JSON", ""))
 		return
 	}
 	defer r.Body.Close()
@@ -41,7 +42,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	businessMessageId := strings.TrimSpace(req.AppHeader.BusinessMessageId)
 	if businessMessageId == "" {
 		setPayNetResponseHeaders(w, r, "")
-		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "appHeader.businessMessageId is required")
+		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "appHeader.businessMessageId is required", "")
 		return
 	}
 
@@ -50,7 +51,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(req.CreditorAccount.Id) == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "creditorAccount.id is required")
+		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "creditorAccount.id is required", "")
 		return
 	}
 
@@ -58,43 +59,43 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	currency := strings.TrimSpace(req.InstructedAmount.Currency)
 	if amount == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.amount is required")
+		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.amount is required", "")
 		return
 	}
 	if currency == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.currency is required")
+		writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.currency is required", "")
 		return
 	}
 
 	// Acquirer business logic: execute payment (e.g. debit debtor, credit creditor).
 	// This example uses a stub; replace with real payment processing.
-	accepted := processPayment(req)
+	accepted, creditorName := processPayment(req)
 	if accepted {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeTransferResponse(w, http.StatusOK, req, TransactionStatusACSP, ReasonCodeAccepted, ReasonCodeNameAccepted, ReasonDescriptionAccepted)
+		writeTransferResponse(w, http.StatusOK, req, TransactionStatusACSP, ReasonCodeAccepted, ReasonCodeNameAccepted, ReasonDescriptionAccepted, creditorName)
 		return
 	}
 	setPayNetResponseHeaders(w, r, responseBizMsgId)
-	writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeNameValidation, ReasonCodeNameValidation, "Payment not accepted")
+	writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeNameValidation, ReasonCodeNameValidation, "Payment not accepted", "")
 }
 
-// processPayment performs the payment transfer (acquirer side). Stub: accept known test values.
-func processPayment(req TransferRequest) bool {
+// processPayment performs the payment transfer (acquirer side). Stub: accept known test values; returns accepted, creditorName.
+func processPayment(req TransferRequest) (bool, string) {
 	creditorAccountId := strings.TrimSpace(req.CreditorAccount.Id)
 	creditorAgentId := strings.TrimSpace(req.CreditorAgent.Id)
 	switch creditorAccountId {
 	case "123456789", "22345678901":
-		return true
+		return true, "Jane Smith"
 	}
 	if creditorAgentId == "MBBEMYKL" && creditorAccountId != "" {
-		return true
+		return true, "Jane Smith"
 	}
-	return false
+	return false, ""
 }
 
-func writeTransferResponse(w http.ResponseWriter, statusCode int, req TransferRequest, txnStatus, reasonCode, reasonName, reasonDesc string) {
-	resp := buildTransferResponse(req, txnStatus, reasonCode, reasonName, reasonDesc)
+func writeTransferResponse(w http.ResponseWriter, statusCode int, req TransferRequest, txnStatus, reasonCode, reasonName, reasonDesc, creditorName string) {
+	resp := buildTransferResponse(req, txnStatus, reasonCode, reasonName, reasonDesc, creditorName)
 
 	bodyBytes, err := json.Marshal(resp)
 	if err != nil {
@@ -125,27 +126,57 @@ func writeTransferResponse(w http.ResponseWriter, statusCode int, req TransferRe
 	writeJSON(w, statusCode, resp)
 }
 
-// buildTransferResponse builds the response per PayNet API spec (appHeader, resp).
-func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonName, reasonDescription string) TransferResponse {
+// buildTransferResponse builds the response per PayNet API spec (appHeader, data, resp).
+// Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/acquirer/domestic#/webhooks/webhooks-v3-payments-transfer-xc/post#response-body
+func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonName, reasonDescription, creditorName string) TransferResponse {
 	origBizMsgId := req.AppHeader.BusinessMessageId
 	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
 	responseBizMsgId := responseBusinessMessageId(origBizMsgId, creditorBic)
+	// transactionId per spec: same as originalBusinessMessageId (request's businessMessageId from RPP).
+	transactionId := origBizMsgId
+	interbankSettlementDate := time.Now().Format("2006-01-02")
 	return TransferResponse{
 		AppHeader: ResponseAppHeader{
 			EndToEndId:                req.AppHeader.EndToEndId,
 			BusinessMessageId:         responseBizMsgId,
 			CreationDateTime:          req.AppHeader.CreationDateTime,
 			OriginalBusinessMessageId: origBizMsgId,
+			TransactionId:             transactionId,
+		},
+		Data: ResponseData{
+			QR: ResponseQR{
+				Category:              CategoryPointOfSales,
+				AcceptedSourceOfFunds: AcceptedSourceOfFundsDefault,
+			},
+			SettlementCycleNumber:  "001",
+			InterbankSettlementDate: interbankSettlementDate,
+			Creditor:               ResponseCreditor{Name: creditorName},
+			CreditorAccount: ResponseCreditorAccount{
+				Id:                req.CreditorAccount.Id,
+				Type:              orDefault(req.CreditorAccount.Type, "WALLET"),
+				ResidentStatus:    "RESIDENT",
+				ProductType:       "ISLAMIC",
+				ShariaCompliance:  "YES",
+				AccountHolderType: "SINGLE",
+				CustomerCategory:  "RET",
+			},
 		},
 		Resp: ResponseStatus{
 			Status: txnStatus,
 			Reason: ResponseReason{
 				Name:        reasonName,
-				Code:        "45",
+				Code:        reasonCode,
 				Description: reasonDescription,
 			},
 		},
 	}
+}
+
+func orDefault(s, def string) string {
+	if strings.TrimSpace(s) != "" {
+		return s
+	}
+	return def
 }
 
 const (
