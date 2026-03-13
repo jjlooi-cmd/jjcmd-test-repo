@@ -2,6 +2,7 @@ package main
 
 import (
 	"example.com/sample-repo/account_enquire_xc"
+	"example.com/sample-repo/payments_transfer_xc"
 	"fmt"
 	"io"
 	"log"
@@ -33,6 +34,7 @@ func main() {
 
 	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
+	http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
 	http.HandleFunc("/webhook/v3/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/admin/event", printRequest)
 
