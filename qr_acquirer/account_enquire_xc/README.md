@@ -31,7 +31,7 @@ Validation:
 Register the handler in your HTTP server:
 
 ```go
-import "example.com/sample-repo/account_enquire_xc"
+import "example.com/sample-repo/qr_acquirer/account_enquire_xc"
 
 http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
 ```

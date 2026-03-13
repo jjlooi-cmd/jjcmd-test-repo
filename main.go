@@ -1,9 +1,9 @@
 package main
 
 import (
-	"example.com/sample-repo/account_enquire_xc"
-	"example.com/sample-repo/payments_reverse"
-	"example.com/sample-repo/payments_transfer_xc"
+	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
+	"example.com/sample-repo/qr_acquirer/payments_reverse"
+	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
 	"fmt"
 	"io"
 	"log"

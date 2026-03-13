@@ -28,7 +28,7 @@ Validation:
 Register the handler in your HTTP server:
 
 ```go
-import "example.com/sample-repo/payments_reverse"
+import "example.com/sample-repo/qr_acquirer/payments_reverse"
 
 http.HandleFunc("/webhooks/v3/payments/reverse", payments_reverse.Handler)
 ```

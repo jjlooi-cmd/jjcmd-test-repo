@@ -28,7 +28,7 @@ Validation:
 Register the handler in your HTTP server:
 
 ```go
-import "example.com/sample-repo/payments_transfer_xc"
+import "example.com/sample-repo/qr_acquirer/payments_transfer_xc"
 
 http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
 ```
