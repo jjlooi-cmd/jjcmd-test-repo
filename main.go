@@ -32,6 +32,7 @@ func main() {
 
 	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", printRequest)
+	http.HandleFunc("//webhook/v3/account-lookup", printRequest)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
