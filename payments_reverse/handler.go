@@ -46,9 +46,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Issuer (OFI) response: use debtorAgent (Issuer BIC) for response business message ID.
-	debtorBic := strings.TrimSpace(req.DebtorAgent.Id)
-	responseBizMsgId := responseBusinessMessageId(businessMessageId, debtorBic)
+	// Response business message ID: use creditorAgent (e.g. MBBEMYKL) so BIC in response is creditor, not debtor (PICAMYK1).
+	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
+	responseBizMsgId := responseBusinessMessageId(businessMessageId, creditorBic)
 
 	if strings.TrimSpace(req.DebtorAccount.Id) == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
@@ -137,8 +137,8 @@ func writeReversalResponse(w http.ResponseWriter, statusCode int, req ReversalRe
 // Ref: https://docs.developer.paynet.my/api-reference/v3/reversal/issuer#/webhooks/webhooks-v3-payments-reverse/post#response-body
 func buildReversalResponse(req ReversalRequest, txnStatus, reasonCode, reasonName, reasonDescription, reasonDetails, reasonAdditionalCode, creditorName string) ReversalResponse {
 	origBizMsgId := req.AppHeader.BusinessMessageId
-	debtorBic := strings.TrimSpace(req.DebtorAgent.Id)
-	responseBizMsgId := responseBusinessMessageId(origBizMsgId, debtorBic)
+	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
+	responseBizMsgId := responseBusinessMessageId(origBizMsgId, creditorBic)
 	transactionId := req.AppHeader.TransactionId
 	interbankSettlementDate := time.Now().Format("2006-01-02")
 	if creditorName == "" {
