@@ -133,7 +133,7 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
 	responseBizMsgId := responseBusinessMessageId(origBizMsgId, creditorBic)
 	// transactionId per spec: same as originalBusinessMessageId (request's businessMessageId from RPP).
-	// transactionId := origBizMsgId
+	transactionId := req.AppHeader.EndToEndId
 	interbankSettlementDate := time.Now().Format("2006-01-02")
 	return TransferResponse{
 		AppHeader: ResponseAppHeader{
@@ -142,7 +142,7 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 			CreationDateTime:          req.AppHeader.CreationDateTime,
 			OriginalBusinessMessageId: origBizMsgId,
 			// TransactionId:             transactionId,
-			TransactionId: "20260313PICAMYK1030OQR07712250",
+			TransactionId: transactionId,
 		},
 		Data: ResponseData{
 			QR: ResponseQR{
