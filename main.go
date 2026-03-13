@@ -6,6 +6,7 @@ import (
 	"example.com/sample-repo/qr_acquirer/payments_reverse"
 	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
 	issuer_enquire "example.com/sample-repo/qr_issuer/account_enquire_xc"
+	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
 	"fmt"
 	"io"
 	"log"
@@ -49,6 +50,35 @@ func main() {
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK) // still 200 so client gets body
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/trigger-transfer-xc — calls PayNet Issuer TransferXC (POST /v3/payments/transfer-xc) with sample request.
+	http.HandleFunc("/v1/trigger-transfer-xc", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := issuer_transfer.DefaultClientConfig()
+		req := issuer_transfer.SampleRequest()
+		resp, statusCode, err := issuer_transfer.TransferXC(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
 			_ = json.NewEncoder(w).Encode(map[string]interface{}{
 				"ok":          false,
 				"error":       err.Error(),
