@@ -137,8 +137,8 @@ func writeReversalResponse(w http.ResponseWriter, statusCode int, req ReversalRe
 // Ref: https://docs.developer.paynet.my/api-reference/v3/reversal/issuer#/webhooks/webhooks-v3-payments-reverse/post#response-body
 func buildReversalResponse(req ReversalRequest, txnStatus, reasonCode, reasonName, reasonDescription, reasonDetails, reasonAdditionalCode, creditorName string) ReversalResponse {
 	origBizMsgId := req.AppHeader.BusinessMessageId
-	// debtorBic := strings.TrimSpace(req.DebtorAgent.Id)
-	// responseBizMsgId := responseBusinessMessageId(origBizMsgId, debtorBic)
+	debtorBic := strings.TrimSpace(req.DebtorAgent.Id)
+	responseBizMsgId := responseBusinessMessageId(origBizMsgId, debtorBic)
 	transactionId := req.AppHeader.TransactionId
 	interbankSettlementDate := time.Now().Format("2006-01-02")
 	if creditorName == "" {
@@ -151,8 +151,8 @@ func buildReversalResponse(req ReversalRequest, txnStatus, reasonCode, reasonNam
 	return ReversalResponse{
 		AppHeader: ResponseAppHeader{
 			EndToEndId: req.AppHeader.EndToEndId,
-			// BusinessMessageId:         responseBizMsgId,
-			BusinessMessageId:         "MBBEMYKL",
+			BusinessMessageId:         responseBizMsgId,
+			// BusinessMessageId:         "MBBEMYKL",
 			CreationDateTime:          req.AppHeader.CreationDateTime,
 			OriginalBusinessMessageId: origBizMsgId,
 			TransactionId:             transactionId,
