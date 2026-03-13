@@ -96,7 +96,8 @@ func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequ
 	category := ""
 	qrAcceptedFunds := []string(nil)
 	if status == StatusSuccessful {
-		txnStatus = TransactionStatusACSP
+		// txnStatus = TransactionStatusACSP
+		txnStatus = TransactionStatusRJCT
 		reasonCodeVal = ReasonCodeAccepted
 		reasonName = ReasonCodeNameAccepted
 		reasonDesc = ReasonDescriptionAccepted
@@ -168,9 +169,9 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 		Resp: ResponseStatus{
 			Status: status,
 			Reason: ResponseReason{
-				Name:        reasonName,
+				Name: reasonName,
 				// Code:        reasonCode,
-				Code:        "00",
+				Code:        "45",
 				Description: reasonDescription,
 			},
 		},
@@ -184,14 +185,16 @@ const (
 )
 
 // PayNet business message ID format (per API spec):
-//   YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8)
+//
+//	YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8)
+//
 // Request from RPP has BIC of requestor (e.g. RPPEMYKL) and originator "H" (Hub).
 // Response (acquirer) must use: BIC = creditor agent (acquirer bank, e.g. MBBEMYKL), Originator = "R" (Retail).
 // Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/acquirer/domestic#/webhooks/webhooks-v3-accounts-enquire-xc/post#response-body
 const (
-	bicStartPosition         = 8
-	bicLength                = 8
-	originatorCodePosition   = 19
+	bicStartPosition       = 8
+	bicLength              = 8
+	originatorCodePosition = 19
 )
 
 // responseBusinessMessageId builds the response appHeader.businessMessageId per PayNet spec:
