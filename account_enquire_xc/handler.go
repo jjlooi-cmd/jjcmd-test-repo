@@ -96,8 +96,8 @@ func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequ
 	category := ""
 	qrAcceptedFunds := []string(nil)
 	if status == StatusSuccessful {
-		// txnStatus = TransactionStatusACSP
-		txnStatus = TransactionStatusRJCT
+		txnStatus = TransactionStatusACSP
+		// txnStatus = TransactionStatusRJCT
 		reasonCodeVal = ReasonCodeAccepted
 		reasonName = ReasonCodeNameAccepted
 		reasonDesc = ReasonDescriptionAccepted
@@ -171,7 +171,8 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 			Reason: ResponseReason{
 				Name: reasonName,
 				// Code:        reasonCode,
-				Code:        "45",
+				Code: "00",
+				// Code:        "45",
 				Description: reasonDescription,
 			},
 		},
