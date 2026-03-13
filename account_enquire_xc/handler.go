@@ -12,11 +12,7 @@ import (
 func Handler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		setPayNetResponseHeaders(w, r, "")
-		writeJSON(w, http.StatusMethodNotAllowed, EnquireResponse{
-			TransactionStatus: StatusReject,
-			ReasonCode:        "METHOD_NOT_ALLOWED",
-			Message:           "POST required",
-		})
+		writeJSON(w, http.StatusMethodNotAllowed, actualResponse(EnquireRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "POST required", "", nil, ""))
 		return
 	}
 
@@ -24,11 +20,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[account_enquire_xc] invalid JSON: %v", err)
 		setPayNetResponseHeaders(w, r, "")
-		writeJSON(w, http.StatusBadRequest, EnquireResponse{
-			TransactionStatus: StatusReject,
-			ReasonCode:        "INVALID_JSON",
-			Message:           "Request body must be valid JSON",
-		})
+		writeJSON(w, http.StatusBadRequest, actualResponse(EnquireRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "Request body must be valid JSON", "", nil, ""))
 		return
 	}
 	defer r.Body.Close()
@@ -46,26 +38,29 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	businessMessageId := strings.TrimSpace(req.AppHeader.BusinessMessageId)
 
-	// Message validation: required appHeader.businessMessageId
+	// Message validation: required appHeader.businessMessageId (API.005 = Missing mandatory field)
 	if businessMessageId == "" {
 		setPayNetResponseHeaders(w, r, "")
-		writeEnquireResponse(w, http.StatusOK, req, StatusReject, "MISSING_MESSAGE_ID", "appHeader.businessMessageId is required", "")
+		writeEnquireResponse(w, http.StatusOK, req, StatusReject, ReasonCodeMissingField, ReasonCodeNameValidation, "appHeader.businessMessageId is required", "")
 		return
 	}
 
-	// Business validation: creditor account id (account being enquired)
+	// Business validation: creditor account id (API.005 = Missing mandatory field)
 	if strings.TrimSpace(req.CreditorAccount.Id) == "" {
 		setPayNetResponseHeaders(w, r, businessMessageId)
-		writeEnquireResponse(w, http.StatusOK, req, StatusNegative, "MISSING_CREDITOR_ACCOUNT", "creditorAccount.id is required", "")
+		writeEnquireResponse(w, http.StatusOK, req, StatusNegative, ReasonCodeMissingField, ReasonCodeNameValidation, "creditorAccount.id is required", "")
 		return
 	}
 
 	// Acquirer business logic: resolve creditor account (e.g. DB lookup, internal API).
 	// This example uses a stub resolver; replace with real lookup.
 	status, reasonCode, message, accountName := resolveAccount(req)
-
+	reasonCodeName := ""
+	if status != StatusSuccessful && reasonCode != "" {
+		reasonCodeName = ReasonCodeNameRecordNotFound
+	}
 	setPayNetResponseHeaders(w, r, businessMessageId)
-	writeEnquireResponse(w, http.StatusOK, req, status, reasonCode, message, accountName)
+	writeEnquireResponse(w, http.StatusOK, req, status, reasonCode, reasonCodeName, message, accountName)
 }
 
 // resolveAccount performs the account enquiry (acquirer side).
@@ -83,24 +78,63 @@ func resolveAccount(req EnquireRequest) (status, reasonCode, message, accountNam
 	if creditorAgentId == "MBBEMYKL" && creditorAccountId != "" {
 		return StatusSuccessful, "", "", "CREDITOR ACCOUNT NAME"
 	}
-	return StatusNegative, "ACCOUNT_NOT_FOUND", "Beneficiary account not found or not eligible", ""
+	return StatusNegative, ReasonCodeRecordNotFound, "Beneficiary account not found or not eligible", ""
 }
 
-func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequest, status, reasonCode, message, accountName string) {
-	resp := EnquireResponse{
-		MessageId:              req.AppHeader.BusinessMessageId,
-		TransactionStatus:      status,
-		BeneficiaryAccountName: accountName,
-		ReasonCode:             reasonCode,
-		Message:                message,
-	}
-	// Mock success response: HTTP 200, ACSP, 00, POINT_OF_SALES
+func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequest, status, reasonCode, reasonCodeName, message, accountName string) {
+	txnStatus := TransactionStatusRJCT
+	reasonCodeVal := reasonCode
+	reasonName := reasonCodeName
+	reasonDesc := message
+	category := ""
+	qrAcceptedFunds := []string(nil)
 	if status == StatusSuccessful {
-		resp.TransactionStatus = TransactionStatusACSP
-		resp.TransactionStatusReason = TransactionStatusReason
-		resp.Category = CategoryPointOfSales
+		txnStatus = TransactionStatusACSP
+		reasonCodeVal = ReasonCodeAccepted
+		reasonName = ReasonCodeNameAccepted
+		reasonDesc = ReasonDescriptionAccepted
+		category = CategoryPointOfSales
+		qrAcceptedFunds = AcceptedSourceOfFundsDefault
 	}
+	resp := actualResponse(req, txnStatus, reasonCodeVal, reasonName, reasonDesc, category, qrAcceptedFunds, accountName)
 	writeJSON(w, statusCode, resp)
+}
+
+// actualResponse builds the response per API reference sample (appHeader, data, resp).
+func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDescription, qrCategory string, acceptedSourceOfFunds []string, creditorName string) EnquireResponse {
+	origBizMsgId := req.AppHeader.BusinessMessageId
+	return EnquireResponse{
+		AppHeader: ResponseAppHeader{
+			EndToEndId:                req.AppHeader.EndToEndId,
+			BusinessMessageId:         req.AppHeader.BusinessMessageId,
+			CreationDateTime:          req.AppHeader.CreationDateTime,
+			OriginalBusinessMessageId: origBizMsgId,
+		},
+		Data: ResponseData{
+			QR: ResponseQR{
+				Category:              qrCategory,
+				AcceptedSourceOfFunds: acceptedSourceOfFunds,
+			},
+			Creditor: ResponseCreditor{Name: creditorName},
+			CreditorAccount: ResponseCreditorAccount{
+				Id:                req.CreditorAccount.Id,
+				Type:              req.CreditorAccount.Type,
+				ResidentStatus:    "",
+				ProductType:       "",
+				ShariaCompliance:  "",
+				AccountHolderType: "",
+				CustomerCategory:  "",
+			},
+		},
+		Resp: ResponseStatus{
+			Status: status,
+			Reason: ResponseReason{
+				Name:        reasonName,
+				Code:        reasonCode,
+				Description: reasonDescription,
+			},
+		},
+	}
 }
 
 // setPayNetResponseHeaders sets mandatory response headers for PayNet webhook (echo from request where applicable).
@@ -121,6 +155,10 @@ func writeJSON(w http.ResponseWriter, statusCode int, body interface{}) {
 	bodyBytes, _ := json.MarshalIndent(body, "", "  ")
 	log.Printf("[account_enquire_xc] --- Outgoing response ---")
 	log.Printf("[account_enquire_xc] HTTP %d", statusCode)
+	log.Printf("[account_enquire_xc] Response Headers:")
+	for k, v := range w.Header() {
+		log.Printf("[account_enquire_xc]   %s: %s", k, strings.Join(v, ", "))
+	}
 	log.Printf("[account_enquire_xc] Body:\n%s", string(bodyBytes))
 	log.Printf("[account_enquire_xc] -------------------------")
 	w.WriteHeader(statusCode)
