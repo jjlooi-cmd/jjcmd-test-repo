@@ -11,8 +11,9 @@ const (
 // Transaction status and reason codes per PayNet API.
 const (
 	TransactionStatusACSP    = "ACSP"    // AcceptedSettlementInProcess
-	TransactionStatusRJCT    = "RJCT"    // Rejected
-	ReasonCodeAccepted       = "U000"    // Success/Transaction Accepted
+	TransactionStatusACTC   = "ACTC"    // AcceptedTechnical - accepted for further processing
+	TransactionStatusRJCT   = "RJCT"    // Rejected
+	ReasonCodeAccepted      = "U000"    // Success/Transaction Accepted
 	ReasonCodeMissingField   = "API.005"  // Missing mandatory field
 	ReasonCodeInvalidBody    = "API.001"  // Invalid request body / message validation
 	ReasonCodeNameAccepted   = "ACCEPTED"
@@ -31,6 +32,7 @@ type ReversalRequest struct {
 	Debtor                       Party               `json:"debtor"`
 	DebtorAccount                DebtorAccount       `json:"debtorAccount"`
 	DebtorAgent                  Agent               `json:"debtorAgent"`
+	Creditor                     Party               `json:"creditor"`
 	CreditorAgent                Agent               `json:"creditorAgent"`
 	CreditorAccount              CreditorAccount     `json:"creditorAccount"`
 	InstructedAmount             InstructedAmount    `json:"instructedAmount"`
@@ -80,6 +82,7 @@ type InstructedAmount struct {
 // Ref: https://docs.developer.paynet.my/api-reference/v3/reversal/issuer#/webhooks/webhooks-v3-payments-reverse/post#response-body
 type ReversalResponse struct {
 	AppHeader ResponseAppHeader `json:"appHeader"`
+	Data      ResponseData      `json:"data"`
 	Resp      ResponseStatus    `json:"resp"`
 }
 
@@ -88,6 +91,24 @@ type ResponseAppHeader struct {
 	BusinessMessageId         string `json:"businessMessageId"`
 	CreationDateTime          string `json:"creationDateTime"`
 	OriginalBusinessMessageId string `json:"originalBusinessMessageId"`
+	TransactionId             string `json:"transactionId"`
+}
+
+// ResponseData - data block with settlement, creditor, creditorAccount (per spec).
+type ResponseData struct {
+	SettlementCycleNumber   string                  `json:"settlementCycleNumber"`
+	InterbankSettlementDate string                  `json:"interbankSettlementDate"`
+	Creditor                ResponseCreditor        `json:"creditor"`
+	CreditorAccount         ResponseCreditorAccount `json:"creditorAccount"`
+}
+
+type ResponseCreditor struct {
+	Name string `json:"name"`
+}
+
+type ResponseCreditorAccount struct {
+	Id   string `json:"id"`
+	Type string `json:"type"`
 }
 
 type ResponseStatus struct {
@@ -96,7 +117,9 @@ type ResponseStatus struct {
 }
 
 type ResponseReason struct {
-	Name        string `json:"name"`
-	Code        string `json:"code"`
-	Description string `json:"description"`
+	Name           string `json:"name"`
+	Code           string `json:"code"`
+	Description    string `json:"description"`
+	Details        string `json:"details,omitempty"`
+	AdditionalCode string `json:"additionalCode,omitempty"`
 }

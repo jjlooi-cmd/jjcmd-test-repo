@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"example.com/sample-repo/jws_generation"
 )
@@ -15,7 +16,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[payments_reverse] Incoming request Authorization (token): %s", r.Header.Get("Authorization"))
 	if r.Method != http.MethodPost {
 		setPayNetResponseHeaders(w, r, "")
-		writeJSON(w, http.StatusMethodNotAllowed, buildReversalResponse(ReversalRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "POST required"))
+		writeJSON(w, http.StatusMethodNotAllowed, buildReversalResponse(ReversalRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "POST required", "", "", ""))
 		return
 	}
 
@@ -23,7 +24,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Printf("[payments_reverse] invalid JSON: %v", err)
 		setPayNetResponseHeaders(w, r, "")
-		writeJSON(w, http.StatusBadRequest, buildReversalResponse(ReversalRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "Request body must be valid JSON"))
+		writeJSON(w, http.StatusBadRequest, buildReversalResponse(ReversalRequest{}, TransactionStatusRJCT, ReasonCodeInvalidBody, ReasonCodeNameValidation, "Request body must be valid JSON", "", "", ""))
 		return
 	}
 	defer r.Body.Close()
@@ -41,7 +42,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	businessMessageId := strings.TrimSpace(req.AppHeader.BusinessMessageId)
 	if businessMessageId == "" {
 		setPayNetResponseHeaders(w, r, "")
-		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "appHeader.businessMessageId is required")
+		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "appHeader.businessMessageId is required", "", "", "")
 		return
 	}
 
@@ -51,7 +52,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	if strings.TrimSpace(req.DebtorAccount.Id) == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "debtorAccount.id is required")
+		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "debtorAccount.id is required", "", "", "")
 		return
 	}
 
@@ -59,44 +60,49 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	currency := strings.TrimSpace(req.InstructedAmount.Currency)
 	if amount == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.amount is required")
+		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.amount is required", "", "", "")
 		return
 	}
 	if currency == "" {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.currency is required")
+		writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeMissingField, ReasonCodeNameValidation, "instructedAmount.currency is required", "", "", "")
 		return
 	}
 
 	// Issuer business logic: process reversal (credit back original debtor, validate original transaction).
 	// This example uses a stub; replace with real reversal processing (e.g. lookup original transfer, credit debtor).
-	accepted := processReversal(req)
+	accepted, creditorName := processReversal(req)
 	if accepted {
 		setPayNetResponseHeaders(w, r, responseBizMsgId)
-		writeReversalResponse(w, http.StatusOK, req, TransactionStatusACSP, ReasonCodeAccepted, ReasonCodeNameAccepted, ReasonDescriptionAccepted)
+		writeReversalResponse(w, http.StatusOK, req, TransactionStatusACTC, ReasonCodeAccepted, ReasonCodeNameAccepted, ReasonDescriptionAccepted, "", "", creditorName)
 		return
 	}
 	setPayNetResponseHeaders(w, r, responseBizMsgId)
-	writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeNameValidation, ReasonCodeNameValidation, "Reversal not accepted")
+	writeReversalResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeNameValidation, ReasonCodeNameValidation, "Reversal not accepted", "", "", "")
 }
 
 // processReversal performs the reversal (Issuer side). Stub: accept when debtor account and amount are present; replace with real logic.
-func processReversal(req ReversalRequest) bool {
+// Returns accepted, creditorName (for response data.creditor.name).
+func processReversal(req ReversalRequest) (bool, string) {
 	debtorAccountId := strings.TrimSpace(req.DebtorAccount.Id)
 	debtorAgentId := strings.TrimSpace(req.DebtorAgent.Id)
+	creditorName := strings.TrimSpace(req.Creditor.Name)
+	if creditorName == "" {
+		creditorName = "string" // placeholder per spec sample
+	}
 	// Stub: accept known test values; otherwise accept if debtor agent and account present.
 	switch debtorAccountId {
 	case "123456789", "22345678901":
-		return true
+		return true, creditorName
 	}
 	if debtorAgentId != "" && debtorAccountId != "" && strings.TrimSpace(req.InstructedAmount.Amount) != "" {
-		return true
+		return true, creditorName
 	}
-	return false
+	return false, ""
 }
 
-func writeReversalResponse(w http.ResponseWriter, statusCode int, req ReversalRequest, txnStatus, reasonCode, reasonName, reasonDesc string) {
-	resp := buildReversalResponse(req, txnStatus, reasonCode, reasonName, reasonDesc)
+func writeReversalResponse(w http.ResponseWriter, statusCode int, req ReversalRequest, txnStatus, reasonCode, reasonName, reasonDesc, reasonDetails, reasonAdditionalCode, creditorName string) {
+	resp := buildReversalResponse(req, txnStatus, reasonCode, reasonName, reasonDesc, reasonDetails, reasonAdditionalCode, creditorName)
 
 	bodyBytes, err := json.Marshal(resp)
 	if err != nil {
@@ -127,24 +133,47 @@ func writeReversalResponse(w http.ResponseWriter, statusCode int, req ReversalRe
 	writeJSON(w, statusCode, resp)
 }
 
-// buildReversalResponse builds the response per PayNet Reversal Issuer API spec (appHeader, resp).
-func buildReversalResponse(req ReversalRequest, txnStatus, reasonCode, reasonName, reasonDescription string) ReversalResponse {
+// buildReversalResponse builds the response per PayNet Reversal Issuer API spec (appHeader, data, resp).
+// Ref: https://docs.developer.paynet.my/api-reference/v3/reversal/issuer#/webhooks/webhooks-v3-payments-reverse/post#response-body
+func buildReversalResponse(req ReversalRequest, txnStatus, reasonCode, reasonName, reasonDescription, reasonDetails, reasonAdditionalCode, creditorName string) ReversalResponse {
 	origBizMsgId := req.AppHeader.BusinessMessageId
 	debtorBic := strings.TrimSpace(req.DebtorAgent.Id)
 	responseBizMsgId := responseBusinessMessageId(origBizMsgId, debtorBic)
+	transactionId := req.AppHeader.EndToEndId
+	interbankSettlementDate := time.Now().Format("2006-01-02")
+	if creditorName == "" {
+		creditorName = "string"
+	}
+	creditorAccountType := strings.TrimSpace(req.CreditorAccount.Type)
+	if creditorAccountType == "" {
+		creditorAccountType = "CURRENT"
+	}
 	return ReversalResponse{
 		AppHeader: ResponseAppHeader{
 			EndToEndId:                req.AppHeader.EndToEndId,
 			BusinessMessageId:         responseBizMsgId,
 			CreationDateTime:          req.AppHeader.CreationDateTime,
 			OriginalBusinessMessageId: origBizMsgId,
+			TransactionId:             transactionId,
+		},
+		Data: ResponseData{
+			SettlementCycleNumber:   "001",
+			InterbankSettlementDate: interbankSettlementDate,
+			Creditor:                ResponseCreditor{Name: creditorName},
+			CreditorAccount: ResponseCreditorAccount{
+				Id:   req.CreditorAccount.Id,
+				Type: creditorAccountType,
+			},
 		},
 		Resp: ResponseStatus{
-			Status: txnStatus,
+			// Status: txnStatus,
+			Status: TransactionStatusACSP,
 			Reason: ResponseReason{
-				Name:        reasonName,
-				Code:        "00",
-				Description: reasonDescription,
+				Name:           reasonName,
+				Code:           "00",
+				Description:    reasonDescription,
+				Details:        reasonDetails,
+				AdditionalCode: reasonAdditionalCode,
 			},
 		},
 	}
