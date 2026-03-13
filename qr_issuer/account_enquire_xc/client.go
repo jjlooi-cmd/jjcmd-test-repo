@@ -66,7 +66,8 @@ func SampleRequest() EnquireRequest {
 			Id: "MBBEMYKL",
 		},
 		CreditorAgent: Agent{
-			Id: "RPPEMYKL",
+			// Id: "RPPEMYKL",
+			Id: "111555",
 		},
 		CreditorAccount: CreditorAccount{
 			// Id:   "123456789",
