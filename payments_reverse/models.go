@@ -46,6 +46,7 @@ type ReversalReasonInfo struct {
 
 type AppHeader struct {
 	EndToEndId        string `json:"endToEndId"`
+	TransactionId        string `json:"transactionId"`
 	BusinessMessageId string `json:"businessMessageId"`
 	CreationDateTime  string `json:"creationDateTime"`
 }
