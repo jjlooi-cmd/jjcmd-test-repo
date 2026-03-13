@@ -48,8 +48,9 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Response business message ID must use originator "R" (Retail); request may have "H" (Hub).
-	responseBizMsgId := responseBusinessMessageId(businessMessageId)
+	// Response business message ID: use creditor BIC (creditorAgent.id) and originator "R" (Retail).
+	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
+	responseBizMsgId := responseBusinessMessageId(businessMessageId, creditorBic)
 
 	// Business validation: creditor account id (API.005 = Missing mandatory field)
 	if strings.TrimSpace(req.CreditorAccount.Id) == "" {
@@ -134,11 +135,13 @@ func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequ
 	writeJSON(w, statusCode, resp)
 }
 
-// actualResponse builds the response per API reference sample (appHeader, data, resp).
-// Response appHeader.businessMessageId must use originator "R" (acquirer); request has "H" (Hub).
+// actualResponse builds the response per PayNet API spec (appHeader, data, resp).
+// appHeader: businessMessageId = response ID (creditor BIC + originator R); originalBusinessMessageId = request ID (echo).
+// Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/acquirer/domestic#/webhooks/webhooks-v3-accounts-enquire-xc/post#response-body
 func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDescription, qrCategory string, acceptedSourceOfFunds []string, creditorName string) EnquireResponse {
 	origBizMsgId := req.AppHeader.BusinessMessageId
-	responseBizMsgId := responseBusinessMessageId(origBizMsgId)
+	creditorBic := strings.TrimSpace(req.CreditorAgent.Id)
+	responseBizMsgId := responseBusinessMessageId(origBizMsgId, creditorBic)
 	return EnquireResponse{
 		AppHeader: ResponseAppHeader{
 			EndToEndId:                req.AppHeader.EndToEndId,
@@ -180,17 +183,35 @@ const (
 	jwsCredentialKey = "64feb830"
 )
 
-// PayNet business message ID format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
-// Request from RPP has originator "H" (Hub); acquirer response must use originator "R" (Retail).
-const originatorCodePosition = 19
+// PayNet business message ID format (per API spec):
+//   YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8)
+// Request from RPP has BIC of requestor (e.g. RPPEMYKL) and originator "H" (Hub).
+// Response (acquirer) must use: BIC = creditor agent (acquirer bank, e.g. MBBEMYKL), Originator = "R" (Retail).
+// Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/acquirer/domestic#/webhooks/webhooks-v3-accounts-enquire-xc/post#response-body
+const (
+	bicStartPosition         = 8
+	bicLength                = 8
+	originatorCodePosition   = 19
+)
 
-// responseBusinessMessageId returns the business message ID for the acquirer response by
-// replacing the originator code at position 19 with 'R'. Validator expects R, request may have H.
-func responseBusinessMessageId(requestId string) string {
+// responseBusinessMessageId builds the response appHeader.businessMessageId per PayNet spec:
+// - BIC at positions 8–15 = creditor agent (e.g. MBBEMYKL). If empty, request BIC is left unchanged.
+// - Originator at position 19 = 'R' (Retail). Request has 'H' (Hub).
+func responseBusinessMessageId(requestId string, creditorBic string) string {
 	if len(requestId) <= originatorCodePosition {
 		return requestId
 	}
 	b := []byte(requestId)
+	creditorBic = strings.TrimSpace(creditorBic)
+	if creditorBic != "" && len(b) >= bicStartPosition+bicLength {
+		bic := creditorBic
+		if len(bic) > bicLength {
+			bic = bic[:bicLength]
+		} else if len(bic) < bicLength {
+			bic = bic + strings.Repeat(" ", bicLength-len(bic))
+		}
+		copy(b[bicStartPosition:bicStartPosition+bicLength], bic)
+	}
 	b[originatorCodePosition] = 'R'
 	return string(b)
 }
