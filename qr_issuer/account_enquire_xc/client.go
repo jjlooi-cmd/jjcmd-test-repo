@@ -45,9 +45,10 @@ func DefaultClientConfig() ClientConfig {
 func SampleRequest() EnquireRequest {
 	return EnquireRequest{
 		AppHeader: AppHeader{
-			EndToEndId:        "20260313MBBEMYKL520OQR68495070",
-			BusinessMessageId: "20260313MBBEMYKL520HQR95535833",
-			CreationDateTime: "2026-03-13T10:30:00.000+08:00",
+			// EndToEndId:        "20260313MBBEMYKL520OQR68495070",
+			EndToEndId:        "20260313MBBEMYKL520OQR95535833",
+			BusinessMessageId: "20260313MBBEMYKL520OQR95535833",
+			CreationDateTime:  "2026-03-13T10:30:00.000+08:00",
 		},
 		Debtor: Party{
 			Id:   "DEBTOR001",
