@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"strings"
+
+	"example.com/sample-repo/jws_generation"
 )
 
 // Handler implements POST /webhooks/v3/accounts/enquire-xc for PayNet QR MPM Domestic Acquirer.
@@ -98,6 +100,34 @@ func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequ
 		qrAcceptedFunds = AcceptedSourceOfFundsDefault
 	}
 	resp := actualResponse(req, txnStatus, reasonCodeVal, reasonName, reasonDesc, category, qrAcceptedFunds, accountName)
+
+	// Minified response body for JWS "ds" (must match exact bytes sent).
+	bodyBytes, err := json.Marshal(resp)
+	if err != nil {
+		log.Printf("[account_enquire_xc] marshal response for JWS: %v", err)
+		writeJSON(w, statusCode, resp)
+		return
+	}
+	privateKey, err := jws_generation.LoadDefaultPrivateKey()
+	if err != nil {
+		log.Printf("[account_enquire_xc] load private key for JWS: %v", err)
+		writeJSON(w, statusCode, resp)
+		return
+	}
+	token, err := jws_generation.GenerateJWS(jws_generation.GenerateOptions{
+		PrivateKey:        privateKey,
+		Algorithm:         jws_generation.RS512,
+		Issuer:            jwsIssuer,
+		BusinessMessageID: req.AppHeader.BusinessMessageId,
+		CredentialKey:     jwsCredentialKey,
+		PayloadForHash:    bodyBytes,
+	})
+	if err != nil {
+		log.Printf("[account_enquire_xc] generate JWS: %v", err)
+		writeJSON(w, statusCode, resp)
+		return
+	}
+	w.Header().Set("Authorization", "Bearer "+token)
 	writeJSON(w, statusCode, resp)
 }
 
@@ -131,17 +161,24 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 			Status: status,
 			Reason: ResponseReason{
 				Name:        reasonName,
-				Code:        reasonCode,
+				// Code:        reasonCode,
+				Code:        "00",
 				Description: reasonDescription,
 			},
 		},
 	}
 }
 
+// JWS issuer and credential key for response signing (acquirer BIC / onboarding key).
+const (
+	jwsIssuer        = "MBBEMYKL"
+	jwsCredentialKey = "64feb830"
+)
+
 // setPayNetResponseHeaders sets mandatory response headers for PayNet webhook (echo from request where applicable).
+// Authorization (JWS) is set in writeEnquireResponse using the actual response body.
 func setPayNetResponseHeaders(w http.ResponseWriter, r *http.Request, businessMessageId string) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Authorization", "Bearer eyJraWQiOiI2NGZlYjdmOCIsInR5cCI6IkpXVCIsImFsZyI6IlJTNTEyIn0.eyJpYXQiOjE3NzMzNzUzMDcsImlzcyI6IlJQUEVNWUtMIiwianRpIjoiMjAyNjAzMTNSUFBFTVlLTDUyMEhRUjEwNzEwNjY4IiwiZXhwIjoxNzczMzc2MjA3LCJrZXkiOiJSUFBFTVlLTCIsImRzIjoiNzE1MjBkMDM1YmJmMDYwZjQ0ZTYxZDIzNGZmNzZlZWIxODIyYjUyNGU2YWJiYzk2MzA1NTA2YzQ2OGMwZWFlYiJ9.Saf4vF6EhNR1aIm1AphL7zaz4agwVMgybISpvRWxqKwcH2aI6tyDeRVBB2siPrXtUZtZyMQrc8q6I2cOGJkEbmyeFpozSE4Qq5HdrGac1ulavmmgyOWzz7s3FZ2QCurJo1BOPi9LuNqImEHCHCKPRg6qEqYE33Gj4uaNPLlxwaZI4-XswsoofRJG32IzARpoyowEdXX4-T4efSEl8fm1L3ahM909vKfywPGaxO0yv10l355WsdP6QyX7ZdyuAjyqLsp9vnQwmbUCF5Pfa18R6blD3DTf-4DHXKG-KiZtTkKHmGjcL8LJ-qXh-cFwh3CCs7U5dF11VWUtJsBIphqx5g")
 	if v := r.Header.Get("X-Client-Id"); v != "" {
 		w.Header().Set("X-Client-Id", v)
 	}
