@@ -48,9 +48,12 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Response business message ID must use originator "R" (Retail); request may have "H" (Hub).
+	responseBizMsgId := responseBusinessMessageId(businessMessageId)
+
 	// Business validation: creditor account id (API.005 = Missing mandatory field)
 	if strings.TrimSpace(req.CreditorAccount.Id) == "" {
-		setPayNetResponseHeaders(w, r, businessMessageId)
+		setPayNetResponseHeaders(w, r, responseBizMsgId)
 		writeEnquireResponse(w, http.StatusOK, req, StatusNegative, ReasonCodeMissingField, ReasonCodeNameValidation, "creditorAccount.id is required", "")
 		return
 	}
@@ -62,7 +65,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	if status != StatusSuccessful && reasonCode != "" {
 		reasonCodeName = ReasonCodeNameRecordNotFound
 	}
-	setPayNetResponseHeaders(w, r, businessMessageId)
+	setPayNetResponseHeaders(w, r, responseBizMsgId)
 	writeEnquireResponse(w, http.StatusOK, req, status, reasonCode, reasonCodeName, message, accountName)
 }
 
@@ -118,7 +121,7 @@ func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequ
 		PrivateKey:        privateKey,
 		Algorithm:         jws_generation.RS512,
 		Issuer:            jwsIssuer,
-		BusinessMessageID: req.AppHeader.BusinessMessageId,
+		BusinessMessageID: resp.AppHeader.BusinessMessageId,
 		CredentialKey:     jwsCredentialKey,
 		PayloadForHash:    bodyBytes,
 	})
@@ -132,12 +135,14 @@ func writeEnquireResponse(w http.ResponseWriter, statusCode int, req EnquireRequ
 }
 
 // actualResponse builds the response per API reference sample (appHeader, data, resp).
+// Response appHeader.businessMessageId must use originator "R" (acquirer); request has "H" (Hub).
 func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDescription, qrCategory string, acceptedSourceOfFunds []string, creditorName string) EnquireResponse {
 	origBizMsgId := req.AppHeader.BusinessMessageId
+	responseBizMsgId := responseBusinessMessageId(origBizMsgId)
 	return EnquireResponse{
 		AppHeader: ResponseAppHeader{
 			EndToEndId:                req.AppHeader.EndToEndId,
-			BusinessMessageId:         req.AppHeader.BusinessMessageId,
+			BusinessMessageId:         responseBizMsgId,
 			CreationDateTime:          req.AppHeader.CreationDateTime,
 			OriginalBusinessMessageId: origBizMsgId,
 		},
@@ -171,9 +176,24 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 
 // JWS issuer and credential key for response signing (acquirer BIC / onboarding key).
 const (
-	jwsIssuer        = "MBBEMYKL"
+	jwsIssuer        = "RPPEMYKL"
 	jwsCredentialKey = "64feb830"
 )
+
+// PayNet business message ID format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
+// Request from RPP has originator "H" (Hub); acquirer response must use originator "R" (Retail).
+const originatorCodePosition = 19
+
+// responseBusinessMessageId returns the business message ID for the acquirer response by
+// replacing the originator code at position 19 with 'R'. Validator expects R, request may have H.
+func responseBusinessMessageId(requestId string) string {
+	if len(requestId) <= originatorCodePosition {
+		return requestId
+	}
+	b := []byte(requestId)
+	b[originatorCodePosition] = 'R'
+	return string(b)
+}
 
 // setPayNetResponseHeaders sets mandatory response headers for PayNet webhook (echo from request where applicable).
 // Authorization (JWS) is set in writeEnquireResponse using the actual response body.
