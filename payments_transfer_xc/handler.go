@@ -77,7 +77,7 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	setPayNetResponseHeaders(w, r, responseBizMsgId)
-	writeTransferResponse(w, http.StatusOK, req, TransactionStatusRJCT, ReasonCodeNameValidation, ReasonCodeNameValidation, "Payment not accepted", "")
+	writeTransferResponse(w, http.StatusOK, req, TransactionStatusACSP, ReasonCodeNameValidation, ReasonCodeNameValidation, "Payment not accepted", "")
 }
 
 // processPayment performs the payment transfer (acquirer side). Stub: accept known test values; returns accepted, creditorName.
@@ -150,7 +150,8 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 			},
 			SettlementCycleNumber:  "001",
 			InterbankSettlementDate: interbankSettlementDate,
-			Creditor:               ResponseCreditor{Name: creditorName},
+			// Creditor:               ResponseCreditor{Name: creditorName},
+			Creditor:               ResponseCreditor{Name: "Jane Smith"},
 			CreditorAccount: ResponseCreditorAccount{
 				Id:                req.CreditorAccount.Id,
 				Type:              orDefault(req.CreditorAccount.Type, "WALLET"),
@@ -165,7 +166,8 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 			Status: txnStatus,
 			Reason: ResponseReason{
 				Name:        reasonName,
-				Code:        reasonCode,
+				// Code:        reasonCode,
+				Code:        "00",
 				Description: reasonDescription,
 			},
 		},
