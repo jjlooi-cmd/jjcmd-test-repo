@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
 	"example.com/sample-repo/qr_acquirer/payments_reverse"
 	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
+	issuer_enquire "example.com/sample-repo/qr_issuer/account_enquire_xc"
 	"fmt"
 	"io"
 	"log"
@@ -31,6 +33,35 @@ func main() {
 	http.HandleFunc("/v1/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("hello world jj"))
+	})
+
+	// GET /v1/trigger-enquire-xc — calls PayNet Issuer EnquireXC with sample request (trigger from browser/curl).
+	http.HandleFunc("/v1/trigger-enquire-xc", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := issuer_enquire.DefaultClientConfig()
+		req := issuer_enquire.SampleRequest()
+		resp, statusCode, err := issuer_enquire.EnquireXC(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK) // still 200 so client gets body
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
 	})
 
 	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
