@@ -163,7 +163,8 @@ func buildTransferResponse(req TransferRequest, txnStatus, reasonCode, reasonNam
 			},
 		},
 		Resp: ResponseStatus{
-			Status: txnStatus,
+			// Status: txnStatus,
+			Status: TransactionStatusACSP,
 			Reason: ResponseReason{
 				Name:        reasonName,
 				// Code:        reasonCode,
