@@ -141,7 +141,7 @@ func actualResponse(req EnquireRequest, status, reasonCode, reasonName, reasonDe
 // setPayNetResponseHeaders sets mandatory response headers for PayNet webhook (echo from request where applicable).
 func setPayNetResponseHeaders(w http.ResponseWriter, r *http.Request, businessMessageId string) {
 	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Authorization", "Bearer x")
+	w.Header().Set("Authorization", "Bearer eyJraWQiOiI2NGZlYjdmOCIsInR5cCI6IkpXVCIsImFsZyI6IlJTNTEyIn0.eyJpYXQiOjE3NzMzNzUzMDcsImlzcyI6IlJQUEVNWUtMIiwianRpIjoiMjAyNjAzMTNSUFBFTVlLTDUyMEhRUjEwNzEwNjY4IiwiZXhwIjoxNzczMzc2MjA3LCJrZXkiOiJSUFBFTVlLTCIsImRzIjoiNzE1MjBkMDM1YmJmMDYwZjQ0ZTYxZDIzNGZmNzZlZWIxODIyYjUyNGU2YWJiYzk2MzA1NTA2YzQ2OGMwZWFlYiJ9.Saf4vF6EhNR1aIm1AphL7zaz4agwVMgybISpvRWxqKwcH2aI6tyDeRVBB2siPrXtUZtZyMQrc8q6I2cOGJkEbmyeFpozSE4Qq5HdrGac1ulavmmgyOWzz7s3FZ2QCurJo1BOPi9LuNqImEHCHCKPRg6qEqYE33Gj4uaNPLlxwaZI4-XswsoofRJG32IzARpoyowEdXX4-T4efSEl8fm1L3ahM909vKfywPGaxO0yv10l355WsdP6QyX7ZdyuAjyqLsp9vnQwmbUCF5Pfa18R6blD3DTf-4DHXKG-KiZtTkKHmGjcL8LJ-qXh-cFwh3CCs7U5dF11VWUtJsBIphqx5g")
 	if v := r.Header.Get("X-Client-Id"); v != "" {
 		w.Header().Set("X-Client-Id", v)
 	}
