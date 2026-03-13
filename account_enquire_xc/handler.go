@@ -118,6 +118,11 @@ func setPayNetResponseHeaders(w http.ResponseWriter, r *http.Request, businessMe
 }
 
 func writeJSON(w http.ResponseWriter, statusCode int, body interface{}) {
+	bodyBytes, _ := json.MarshalIndent(body, "", "  ")
+	log.Printf("[account_enquire_xc] --- Outgoing response ---")
+	log.Printf("[account_enquire_xc] HTTP %d", statusCode)
+	log.Printf("[account_enquire_xc] Body:\n%s", string(bodyBytes))
+	log.Printf("[account_enquire_xc] -------------------------")
 	w.WriteHeader(statusCode)
 	_ = json.NewEncoder(w).Encode(body)
 }
