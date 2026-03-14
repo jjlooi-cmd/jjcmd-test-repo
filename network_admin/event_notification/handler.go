@@ -15,7 +15,7 @@ const (
 	jwsIssuer        = "RPPEMYKL"
 	jwsCredentialKey = "64feb830"
 	// participantBic is used as BIC in response businessMessageId (participant = API consumer).
-	participantBic = "RPPEMYKL"
+	participantBic = "MBBEMYKL"
 )
 
 // Business message ID format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
