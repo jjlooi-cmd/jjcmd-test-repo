@@ -47,13 +47,13 @@ func DefaultClientConfig() ClientConfig {
 // BusinessMessageId format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
 // Spec: use QR Enquiry (520) BMID with transaction code 030 (POS) or 040 (P2P); creditor.name from enquiry response.
 func SampleRequest() TransferRequest {
-	bmid := "20260313MBBEMYKL030OQR95535834"
+	bmid := "20260314MBBEMYKL520OQR95535833"
 	return TransferRequest{
 		AppHeader: AppHeader{
 			EndToEndId:        bmid,
 			TransactionId:     bmid,
 			BusinessMessageId: bmid,
-			CreationDateTime:  "2026-03-13T10:35:00.000+08:00",
+			CreationDateTime:  "2026-03-14T00:30:00.000+08:00",
 		},
 		InterbankSettlementAmount: InterbankSettlementAmount{
 			Value:    10.00,
@@ -78,16 +78,16 @@ func SampleRequest() TransferRequest {
 			Name: "Jane Smith",
 		},
 		CreditorAccount: CreditorAccount{
-			Id: "800350003273501000",
+			Id: "0123456789",
 		},
 		CreditorAgent: Agent{
-			Id: "890145",
+			Id: "111555",
 		},
 		RecipientReference: "QR Payment",
 		PaymentDescription: "Lunch at Nasi Lemak Shop",
 		QR: QR{
-			Code:                 "00020201021126430014A000000615000101068901450211800030113635204000053034585802MY5908Jane Smith6002MY6237030200050516477061880003011363010000463046306",
-			Category:             "POINT_OF_SALES",
+			Code:                  "00020201021226420014A00000061500010106111555021001234567895204000153034585802MY5916Kedai CU Sdn Bhd6012Kuala Lumpur6304D9D6",
+			Category:              "POINT_OF_SALES",
 			AcceptedSourceOfFunds: []string{"CASA", "WALLET"},
 		},
 	}
