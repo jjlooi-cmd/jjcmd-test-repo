@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"example.com/sample-repo/network_admin/sign_off"
 	"example.com/sample-repo/network_admin/sign_on"
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
 	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
@@ -145,6 +146,35 @@ func main() {
 		cfg := sign_on.DefaultClientConfig()
 		req := sign_on.SampleRequest()
 		resp, statusCode, err := sign_on.SignOn(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/trigger-sign-off — calls PayNet /v3/admin/sign-off (disconnect from RPP, txn code 000).
+	http.HandleFunc("/v1/trigger-sign-off", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := sign_off.DefaultClientConfig()
+		req := sign_off.SampleRequest()
+		resp, statusCode, err := sign_off.SignOff(cfg, req)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
