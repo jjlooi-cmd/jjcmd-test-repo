@@ -103,6 +103,42 @@ func main() {
 		})
 	})
 
+	// GET /v1/trigger-reverse-xc — calls PayNet v3/payments/reverse with sample request (outbound reversal client).
+	http.HandleFunc("/v1/trigger-reverse-xc", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := issuer_reverse.DefaultClientConfig()
+		req := issuer_reverse.SampleRequest()
+		resp, statusCode, respHeaders, err := issuer_reverse.ReverseXC(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		log.Printf("[trigger-reverse-xc] --- Response headers ---")
+		for k, v := range respHeaders {
+			log.Printf("[trigger-reverse-xc]   %s: %s", k, v)
+		}
+		respJSON, _ := json.MarshalIndent(resp, "", "  ")
+		log.Printf("[trigger-reverse-xc] --- Response body ---\n%s", string(respJSON))
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":              true,
+			"http_status":     statusCode,
+			"response_header": respHeaders,
+			"response":        resp,
+		})
+	})
+
 	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
 	http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
