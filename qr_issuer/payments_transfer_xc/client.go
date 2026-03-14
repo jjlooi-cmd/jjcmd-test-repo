@@ -64,8 +64,8 @@ func SampleRequest() TransferRequest {
 			Name: "John Doe",
 		},
 		DebtorAccount: DebtorAccount{
-			Id:                "5555008808290400",
-			Type:              "WALLET",
+			Id:                "1234567890",
+			Type:              "CURRENT",
 			ResidentStatus:    "RESIDENT",
 			ProductType:       "ISLAMIC",
 			ShariaCompliance:  "YES",
