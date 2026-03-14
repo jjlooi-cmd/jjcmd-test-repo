@@ -47,7 +47,7 @@ func DefaultClientConfig() ClientConfig {
 // BusinessMessageId format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
 // Spec: use QR Enquiry (520) BMID with transaction code 030 (POS) or 040 (P2P); creditor.name from enquiry response.
 func SampleRequest() TransferRequest {
-	bmid := "20260314MBBEMYKL520OQR95535833"
+	bmid := "20260314MBBEMYKL030OQR95535833"
 	return TransferRequest{
 		AppHeader: AppHeader{
 			EndToEndId: bmid,
