@@ -3,9 +3,9 @@ package main
 import (
 	"encoding/json"
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
-	"example.com/sample-repo/qr_acquirer/payments_reverse"
 	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
 	issuer_enquire "example.com/sample-repo/qr_issuer/account_enquire_xc"
+	issuer_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
 	"fmt"
 	"io"
@@ -106,7 +106,7 @@ func main() {
 	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
 	http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
-	http.HandleFunc("/webhooks/v3/payments/reverse", payments_reverse.Handler)
+	http.HandleFunc("/webhooks/v3/payments/reverse", issuer_reverse.Handler)
 	http.HandleFunc("/webhook/v3/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/admin/event", printRequest)
 
