@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"example.com/sample-repo/network_admin/echo"
 	"example.com/sample-repo/network_admin/sign_off"
 	"example.com/sample-repo/network_admin/sign_on"
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
@@ -175,6 +176,35 @@ func main() {
 		cfg := sign_off.DefaultClientConfig()
 		req := sign_off.SampleRequest()
 		resp, statusCode, err := sign_off.SignOff(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/trigger-echo — calls PayNet /v3/admin/echo (System Administration).
+	http.HandleFunc("/v1/trigger-echo", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := echo.DefaultClientConfig()
+		req := echo.SampleRequest()
+		resp, statusCode, err := echo.Echo(cfg, req)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
