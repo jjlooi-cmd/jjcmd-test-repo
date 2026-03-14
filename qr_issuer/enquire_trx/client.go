@@ -37,12 +37,13 @@ func DefaultClientConfig() ClientConfig {
 func SampleRequest() TransactionEnquiryRequest {
 	return TransactionEnquiryRequest{
 		AppHeader: TrxEnquiryAppHeader{
-			BusinessMessageId: "20250709TESTMYKL630ORM00000060",
+			// BusinessMessageId: "20250709TESTMYKL630ORM00000060",
+			BusinessMessageId: "20260314MBBEMYKL630OQR95535833",
 			CreationDateTime:  "2025-07-09T12:31:56.170+08:00",
-			TransactionId:     "20250709TESTMYKL030OQR00057310",
+			TransactionId:     "20260314MBBEMYKL030OQR00057310",
 		},
-		DebtorAgent:   Agent{Id: "TESTMYKL"},
-		CreditorAgent: Agent{Id: "TST1MYKL"},
+		DebtorAgent:   Agent{Id: "MBBEMYKL"},
+		CreditorAgent: Agent{Id: "MBBEMYKL"},
 	}
 }
 
