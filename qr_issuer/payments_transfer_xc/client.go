@@ -60,8 +60,8 @@ func SampleRequest() TransferRequest {
 			Currency: "MYR",
 		},
 		Debtor: Party{
-			Id:   "890114065142",
-			Name: "John Doe",
+			Id:   "DEBTOR001",
+			Name: "Sample Debtor Name",
 		},
 		DebtorAccount: DebtorAccount{
 			Id:                "1234567890",
