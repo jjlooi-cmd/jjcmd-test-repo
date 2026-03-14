@@ -45,7 +45,7 @@ func DefaultClientConfig() ClientConfig {
 // SampleRequest returns a sample PaymentReverseRequest for testing.
 // BusinessMessageId format: YYYYMMDD(8) + BIC(8) + XXX(3) + O(1) + CC(2) + SSSSSSSS(8). Transaction type 011 for DuitNow Transfer/DuitNowQR.
 func SampleRequest() PaymentReverseRequest {
-	bmid := "20260314MBBEMYKL011OQR95535834"
+	bmid := "20260314MBBEMYKL011ORB95535834"
 	return PaymentReverseRequest{
 		AppHeader: ReverseAppHeader{
 			EndToEndId:        bmid,
