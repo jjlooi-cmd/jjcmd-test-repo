@@ -39,7 +39,7 @@ func SampleRequest() TransactionEnquiryRequest {
 		AppHeader: TrxEnquiryAppHeader{
 			// BusinessMessageId: "20250709TESTMYKL630ORM00000060",
 			BusinessMessageId: "20260314MBBEMYKL630ORB95535833",
-			CreationDateTime:  "2025-07-09T12:31:56.170+08:00",
+			CreationDateTime:  "2026-03-14T17:31:56.170+08:00",
 			TransactionId:     "20260314MBBEMYKL030OQR00057310",
 		},
 		DebtorAgent:   Agent{Id: "MBBEMYKL"},
