@@ -50,8 +50,9 @@ func SampleRequest() TransferRequest {
 	bmid := "20260314MBBEMYKL520OQR95535833"
 	return TransferRequest{
 		AppHeader: AppHeader{
-			EndToEndId:        bmid,
-			TransactionId:     bmid,
+			EndToEndId: bmid,
+			// TransactionId:     bmid,
+			TransactionId:     "20260314MBBEMYKL030OQR00057310",
 			BusinessMessageId: bmid,
 			CreationDateTime:  "2026-03-14T00:30:00.000+08:00",
 		},
