@@ -12,10 +12,10 @@ import (
 
 // JWS issuer and credential key for response signing (participant BIC / onboarding key).
 const (
-	jwsIssuer        = "MBBEMYKL"
+	jwsIssuer        = "RPPEMYKL"
 	jwsCredentialKey = "64feb830"
 	// participantBic is used as BIC in response businessMessageId (participant = API consumer).
-	participantBic = "MBBEMYKL"
+	participantBic = "RPPEMYKL"
 )
 
 // Business message ID format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
