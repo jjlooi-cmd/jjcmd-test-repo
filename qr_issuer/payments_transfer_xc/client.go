@@ -89,7 +89,8 @@ func SampleRequest() TransferRequest {
 		QR: QR{
 			Code:                  "00020201021226420014A00000061500010106111555021001234567895204000153034585802MY5916Kedai CU Sdn Bhd6012Kuala Lumpur6304D9D6",
 			Category:              "POINT_OF_SALES",
-			AcceptedSourceOfFunds: []string{"CASA", "WALLET"},
+			AcceptedSourceOfFunds: []string{"CASA"},
+			PromoCode:             "PROMO123",
 		},
 	}
 }
