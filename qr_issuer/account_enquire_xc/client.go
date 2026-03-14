@@ -159,6 +159,16 @@ func EnquireXC(cfg ClientConfig, req EnquireRequest) (*EnquireResponse, int, err
 		return nil, resp.StatusCode, fmt.Errorf("read response body: %w", err)
 	}
 
+	// Log response from external API
+	log.Printf("[account_enquire_xc] --- Response from external API ---")
+	log.Printf("[account_enquire_xc] Status: %d %s", resp.StatusCode, resp.Status)
+	log.Printf("[account_enquire_xc] Response Headers:")
+	for k, v := range resp.Header {
+		log.Printf("[account_enquire_xc]   %s: %s", k, strings.Join(v, ", "))
+	}
+	log.Printf("[account_enquire_xc] Response Body:\n%s", string(respBody))
+	log.Printf("[account_enquire_xc] -----------------------------------------")
+
 	if resp.StatusCode != http.StatusOK {
 		return nil, resp.StatusCode, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
 	}

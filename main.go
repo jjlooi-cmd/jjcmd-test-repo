@@ -75,7 +75,7 @@ func main() {
 		}
 		cfg := issuer_transfer.DefaultClientConfig()
 		req := issuer_transfer.SampleRequest()
-		resp, statusCode, err := issuer_transfer.TransferXC(cfg, req)
+		resp, statusCode, respHeaders, err := issuer_transfer.TransferXC(cfg, req)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
@@ -86,11 +86,20 @@ func main() {
 			})
 			return
 		}
+		// Print response headers and body to server log
+		log.Printf("[trigger-transfer-xc] --- Response headers ---")
+		for k, v := range respHeaders {
+			log.Printf("[trigger-transfer-xc]   %s: %s", k, v)
+		}
+		respJSON, _ := json.MarshalIndent(resp, "", "  ")
+		log.Printf("[trigger-transfer-xc] --- Response body ---\n%s", string(respJSON))
+		// Include both in HTTP response
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"ok":          true,
-			"http_status": statusCode,
-			"response":    resp,
+			"ok":              true,
+			"http_status":     statusCode,
+			"response_header": respHeaders,
+			"response":        resp,
 		})
 	})
 

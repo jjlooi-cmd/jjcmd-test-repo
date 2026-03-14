@@ -43,7 +43,7 @@ func DefaultClientConfig() ClientConfig {
 }
 
 // SampleRequest returns a sample TransferRequest with values filled in for testing.
-// Use with TransferXC: resp, code, err := TransferXC(DefaultClientConfig(), SampleRequest()).
+// Use with TransferXC: resp, code, headers, err := TransferXC(DefaultClientConfig(), SampleRequest()).
 // BusinessMessageId format: YYYYMMDD(8) + BIC(8) + TxnCode(3) + Originator(1) + Channel(2) + Sequence(8).
 // Spec: use QR Enquiry (520) BMID with transaction code 030 (POS) or 040 (P2P); creditor.name from enquiry response.
 func SampleRequest() TransferRequest {
@@ -95,16 +95,17 @@ func SampleRequest() TransferRequest {
 
 // TransferXC sends a POST request to PayNet's v3/payments/transfer-xc (Issuer) and returns the response.
 // Authorization header is built using JWS over the request body, following the same approach as qr_issuer/account_enquire_xc.
+// Returns the parsed response body, HTTP status code, response headers (clone), and an error.
 // Ref: https://docs.developer.paynet.my/api-reference/v3/QR-MPM/issuer/domestic#/paths/v3-payments-transfer-xc/post
-func TransferXC(cfg ClientConfig, req TransferRequest) (*TransferResponse, int, error) {
+func TransferXC(cfg ClientConfig, req TransferRequest) (*TransferResponse, int, http.Header, error) {
 	bodyBytes, err := json.Marshal(req)
 	if err != nil {
-		return nil, 0, fmt.Errorf("marshal request: %w", err)
+		return nil, 0, nil, fmt.Errorf("marshal request: %w", err)
 	}
 
 	privateKey, err := jws_generation.LoadDefaultPrivateKey()
 	if err != nil {
-		return nil, 0, fmt.Errorf("load private key for JWS: %w", err)
+		return nil, 0, nil, fmt.Errorf("load private key for JWS: %w", err)
 	}
 
 	issuer := strings.TrimSpace(cfg.JWSIssuer)
@@ -125,7 +126,7 @@ func TransferXC(cfg ClientConfig, req TransferRequest) (*TransferResponse, int, 
 		PayloadForHash:    bodyBytes,
 	})
 	if err != nil {
-		return nil, 0, fmt.Errorf("generate JWS: %w", err)
+		return nil, 0, nil, fmt.Errorf("generate JWS: %w", err)
 	}
 
 	baseURL := strings.TrimSuffix(cfg.BaseURL, "/")
@@ -133,7 +134,7 @@ func TransferXC(cfg ClientConfig, req TransferRequest) (*TransferResponse, int, 
 
 	httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return nil, 0, fmt.Errorf("create request: %w", err)
+		return nil, 0, nil, fmt.Errorf("create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -167,23 +168,29 @@ func TransferXC(cfg ClientConfig, req TransferRequest) (*TransferResponse, int, 
 	client := &http.Client{}
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, 0, fmt.Errorf("http request: %w", err)
+		return nil, 0, nil, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("read response body: %w", err)
+		return nil, resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
+	}
+
+	// Clone response headers for caller (resp may be closed)
+	respHeader := make(http.Header)
+	for k, v := range resp.Header {
+		respHeader[k] = v
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp.StatusCode, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
+		return nil, resp.StatusCode, respHeader, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var transferResp TransferResponse
 	if err := json.Unmarshal(respBody, &transferResp); err != nil {
-		return nil, resp.StatusCode, fmt.Errorf("decode response: %w", err)
+		return nil, resp.StatusCode, respHeader, fmt.Errorf("decode response: %w", err)
 	}
 
-	return &transferResp, resp.StatusCode, nil
+	return &transferResp, resp.StatusCode, respHeader, nil
 }
