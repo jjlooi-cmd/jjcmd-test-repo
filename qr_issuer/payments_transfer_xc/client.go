@@ -56,7 +56,7 @@ func SampleRequest() TransferRequest {
 			CreationDateTime:  "2026-03-14T00:30:00.000+08:00",
 		},
 		InterbankSettlementAmount: InterbankSettlementAmount{
-			Value:    10.00,
+			Value:    DecimalAmount(10.00),
 			Currency: "MYR",
 		},
 		Debtor: Party{

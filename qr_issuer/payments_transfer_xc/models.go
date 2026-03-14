@@ -1,5 +1,27 @@
 package payments_transfer_xc
 
+import "strconv"
+
+// DecimalAmount is a float64 that marshals to JSON with exactly two decimal places (e.g. 10.00).
+// Go's encoding/json marshals float64 10.0 as "10"; PayNet may expect "10.00". This type fixes that.
+type DecimalAmount float64
+
+// MarshalJSON implements json.Marshaler so value is written with 2 decimal places.
+func (d DecimalAmount) MarshalJSON() ([]byte, error) {
+	return []byte(strconv.FormatFloat(float64(d), 'f', 2, 64)), nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler for round-trip and parsing.
+func (d *DecimalAmount) UnmarshalJSON(data []byte) error {
+	s := string(data)
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return err
+	}
+	*d = DecimalAmount(v)
+	return nil
+}
+
 // TransferRequest is the request payload for POST /v3/payments/transfer-xc (Issuer).
 // Schema: QRPaymentRequest from PayNet Merchant Presented QR Domestic - Issuer API spec.
 // Ref: document (2).yaml § components.schemas.QRPaymentRequest
@@ -29,8 +51,8 @@ type AppHeader struct {
 
 // InterbankSettlementAmount - amount and currency (value in MYR, up to 2 decimal places).
 type InterbankSettlementAmount struct {
-	Value    float64 `json:"value"`
-	Currency string `json:"currency,omitempty"` // default MYR
+	Value    DecimalAmount `json:"value"` // marshals as e.g. 10.00, not 10
+	Currency string       `json:"currency,omitempty"` // default MYR
 }
 
 // Party - debtor party (id, name).
