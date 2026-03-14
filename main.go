@@ -5,6 +5,7 @@ import (
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
 	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
 	issuer_enquire "example.com/sample-repo/qr_issuer/account_enquire_xc"
+	issuer_enquire_trx "example.com/sample-repo/qr_issuer/enquire_trx"
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
 	"fmt"
@@ -100,6 +101,35 @@ func main() {
 			"http_status":     statusCode,
 			"response_header": respHeaders,
 			"response":        resp,
+		})
+	})
+
+	// GET /v1/trigger-enquire-trx — calls PayNet /v3/transactions/enquire with sample request.
+	http.HandleFunc("/v1/trigger-enquire-trx", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := issuer_enquire_trx.DefaultClientConfig()
+		req := issuer_enquire_trx.SampleRequest()
+		resp, statusCode, err := issuer_enquire_trx.EnquireTrx(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
 		})
 	})
 
