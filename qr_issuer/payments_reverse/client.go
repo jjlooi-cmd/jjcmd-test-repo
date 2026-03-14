@@ -54,7 +54,7 @@ func SampleRequest() PaymentReverseRequest {
 			CreationDateTime:  "2026-03-14T17:00:00.000+08:00",
 		},
 		InterbankSettlementAmount: InterbankSettlementAmount{
-			Value:    10.00,
+			Value:    DecimalAmount(10.00),
 			Currency: "MYR",
 		},
 		Debtor: ReverseParty{
