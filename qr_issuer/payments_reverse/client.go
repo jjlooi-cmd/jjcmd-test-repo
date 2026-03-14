@@ -8,21 +8,26 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"time"
 
 	"example.com/sample-repo/jws_generation"
 )
 
-// ClientConfig holds configuration for the PayNet DuitNow Reversal client (outbound call to PayNet).
-// Path /v3/payments/reverse is appended to BaseURL.
+// ClientConfig holds configuration for the PayNet DuitNow Reversal client (POST /v3/payments/reverse).
 type ClientConfig struct {
-	BaseURL          string
-	ClientID         string
-	ApiVersion       string
-	JWSIssuer        string
+	// BaseURL is the PayNet API base URL. Path /v3/payments/reverse is appended.
+	BaseURL string
+	// ClientID is the X-Client-Id header value (from onboarding).
+	ClientID string
+	// ApiVersion is the X-Api-Version header value (e.g. v3).
+	ApiVersion string
+	// JWSIssuer is the issuer claim (e.g. BIC code) used to sign the request.
+	JWSIssuer string
+	// JWSCredentialKey is the JWT Credential Key assigned during onboarding.
 	JWSCredentialKey string
-	GPSCoordinates   string
-	IPAddress        string
+	// GPSCoordinates optional; location of sender (decimal degree). Spec: x-gps-coordinates.
+	GPSCoordinates string
+	// IPAddress is required by the API; IP where transaction originated (IPv4 or IPv6). Spec: x-ip-address.
+	IPAddress string
 }
 
 // DefaultClientConfig returns a config with default JWS issuer/credential key (same pattern as account_enquire_xc).
@@ -33,65 +38,64 @@ func DefaultClientConfig() ClientConfig {
 		ApiVersion:       "v3",
 		JWSIssuer:        "MBBEMYKL",
 		JWSCredentialKey: "64feb830",
+		IPAddress:        "74.220.48.246",
 	}
 }
 
-// SampleRequest returns a sample PaymentReverseWebhookRequest for testing.
-// BusinessMessageId: use reversal transaction type (e.g. 011/012); format YYYYMMDDBBBBBBBBXXXOCCSSSSSSSS.
-func SampleRequest() PaymentReverseWebhookRequest {
-	bmid := "20260314MBBEMYKL011RQR95535834"
-	origTxnId := "20260314MBBEMYKL030OQR00057310"
-	return PaymentReverseWebhookRequest{
-		SettlementCycleNumber:   "001",
-		InterbankSettlementDate: time.Now().Format("2006-01-02"),
-		AppHeader: PaymentReverseAppHeader{
+// SampleRequest returns a sample PaymentReverseRequest for testing.
+// BusinessMessageId format: YYYYMMDD(8) + BIC(8) + XXX(3) + O(1) + CC(2) + SSSSSSSS(8). Transaction type 011 for DuitNow Transfer/DuitNowQR.
+func SampleRequest() PaymentReverseRequest {
+	bmid := "20260314MBBEMYKL011OQR95535834"
+	return PaymentReverseRequest{
+		AppHeader: ReverseAppHeader{
 			EndToEndId:        bmid,
-			TransactionId:     origTxnId,
+			TransactionId:     "20260314MBBEMYKL030OQR00057310",
 			BusinessMessageId: bmid,
-			CreationDateTime:  time.Now().Format(time.RFC3339),
+			CreationDateTime:  "2026-03-14T17:00:00.000+08:00",
 		},
 		InterbankSettlementAmount: InterbankSettlementAmount{
 			Value:    10.00,
 			Currency: "MYR",
 		},
-		Debtor: PaymentReverseParty{
+		Debtor: ReverseParty{
 			Name: "Jane Smith",
 			Type: "RET",
 		},
-		DebtorAccount: PaymentReverseAccount{
+		DebtorAccount: ReverseDebtorAccount{
 			Id:   "0123456789",
-			Type: "SAVINGS",
+			Type: "DEFAULT",
 		},
-		DebtorAgent: PaymentReverseAgent{
+		DebtorAgent: ReverseAgent{
 			Id: "111555",
 		},
-		Creditor: PaymentReverseParty{
+		Creditor: ReverseParty{
 			Name: "Sample Debtor Name",
 			Type: "RET",
 		},
-		CreditorAccount: PaymentReverseAccount{
+		CreditorAccount: ReverseCreditorAccount{
 			Id:   "1234567890",
 			Type: "CURRENT",
 		},
-		CreditorAgent: PaymentReverseAgent{
+		CreditorAgent: ReverseAgent{
 			Id: "MBBEMYKL",
 		},
-		PaymentDescription: "Reversal of QR payment",
+		PaymentDescription:    "Reversal of QR payment",
+		AcceptedSourceOfFunds: []string{"CASA"},
 	}
 }
 
-// ReverseXC sends a POST request to PayNet's v3/payments/reverse and returns the response.
-// Authorization is JWS over the request body. On 200 returns PaymentReverseResponse; on 400 returns ErrorResponse in err or a separate out param if needed.
-// Ref: document (3).yaml - DuitNow Reversal (outbound call to submit reversal).
-func ReverseXC(cfg ClientConfig, req PaymentReverseWebhookRequest) (*PaymentReverseResponse, int, http.Header, error) {
+// Reverse sends a POST request to PayNet's v3/payments/reverse and returns the response.
+// Authorization is JWS over the request body (same approach as qr_issuer/account_enquire_xc).
+// Ref: document (4).yaml — DuitNow Reversal (Acquirer initiates reversal to PayNet).
+func Reverse(cfg ClientConfig, req PaymentReverseRequest) (*PaymentReverseResponse, int, error) {
 	bodyBytes, err := json.Marshal(req)
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("marshal request: %w", err)
+		return nil, 0, fmt.Errorf("marshal request: %w", err)
 	}
 
 	privateKey, err := jws_generation.LoadDefaultPrivateKey()
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("load private key for JWS: %w", err)
+		return nil, 0, fmt.Errorf("load private key for JWS: %w", err)
 	}
 
 	issuer := strings.TrimSpace(cfg.JWSIssuer)
@@ -112,7 +116,7 @@ func ReverseXC(cfg ClientConfig, req PaymentReverseWebhookRequest) (*PaymentReve
 		PayloadForHash:    bodyBytes,
 	})
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("generate JWS: %w", err)
+		return nil, 0, fmt.Errorf("generate JWS: %w", err)
 	}
 
 	baseURL := strings.TrimSuffix(cfg.BaseURL, "/")
@@ -120,7 +124,7 @@ func ReverseXC(cfg ClientConfig, req PaymentReverseWebhookRequest) (*PaymentReve
 
 	httpReq, err := http.NewRequest(http.MethodPost, url, bytes.NewReader(bodyBytes))
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("create request: %w", err)
+		return nil, 0, fmt.Errorf("create request: %w", err)
 	}
 
 	httpReq.Header.Set("Content-Type", "application/json")
@@ -143,10 +147,11 @@ func ReverseXC(cfg ClientConfig, req PaymentReverseWebhookRequest) (*PaymentReve
 
 	log.Printf("[payments_reverse] --- Outgoing request to external API ---")
 	log.Printf("[payments_reverse] Method: %s URL: %s", httpReq.Method, httpReq.URL.String())
-	log.Printf("[payments_reverse] Headers: X-Client-Id=%s X-Api-Version=%s x-business-message-id=%s",
+	log.Printf("[payments_reverse] Headers: X-Client-Id=%s X-Api-Version=%s x-business-message-id=%s x-ip-address=%s",
 		httpReq.Header.Get("X-Client-Id"),
 		httpReq.Header.Get("X-Api-Version"),
-		httpReq.Header.Get("x-business-message-id"))
+		httpReq.Header.Get("x-business-message-id"),
+		httpReq.Header.Get("x-ip-address"))
 	bodyIndent, _ := json.MarshalIndent(req, "", "  ")
 	log.Printf("[payments_reverse] Body:\n%s", string(bodyIndent))
 	log.Printf("[payments_reverse] -----------------------------------------")
@@ -154,28 +159,28 @@ func ReverseXC(cfg ClientConfig, req PaymentReverseWebhookRequest) (*PaymentReve
 	client := &http.Client{}
 	resp, err := client.Do(httpReq)
 	if err != nil {
-		return nil, 0, nil, fmt.Errorf("http request: %w", err)
+		return nil, 0, fmt.Errorf("http request: %w", err)
 	}
 	defer resp.Body.Close()
 
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, resp.StatusCode, nil, fmt.Errorf("read response body: %w", err)
+		return nil, resp.StatusCode, fmt.Errorf("read response body: %w", err)
 	}
 
-	respHeader := make(http.Header)
-	for k, v := range resp.Header {
-		respHeader[k] = v
-	}
+	log.Printf("[payments_reverse] --- Response from external API ---")
+	log.Printf("[payments_reverse] Status: %d %s", resp.StatusCode, resp.Status)
+	log.Printf("[payments_reverse] Response Body:\n%s", string(respBody))
+	log.Printf("[payments_reverse] -----------------------------------------")
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, resp.StatusCode, respHeader, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
+		return nil, resp.StatusCode, fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(respBody))
 	}
 
 	var reverseResp PaymentReverseResponse
 	if err := json.Unmarshal(respBody, &reverseResp); err != nil {
-		return nil, resp.StatusCode, respHeader, fmt.Errorf("decode response: %w", err)
+		return nil, resp.StatusCode, fmt.Errorf("decode response: %w", err)
 	}
 
-	return &reverseResp, resp.StatusCode, respHeader, nil
+	return &reverseResp, resp.StatusCode, nil
 }

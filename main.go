@@ -5,7 +5,7 @@ import (
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
 	"example.com/sample-repo/qr_acquirer/payments_transfer_xc"
 	issuer_enquire "example.com/sample-repo/qr_issuer/account_enquire_xc"
-	issuer_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
+	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
 	"fmt"
 	"io"
@@ -103,17 +103,17 @@ func main() {
 		})
 	})
 
-	// GET /v1/trigger-reverse-xc — calls PayNet v3/payments/reverse with sample request (outbound reversal client).
-	http.HandleFunc("/v1/trigger-reverse-xc", func(w http.ResponseWriter, r *http.Request) {
+	// GET /v1/trigger-reverse — calls PayNet v3/payments/reverse (reversal) with sample request.
+	http.HandleFunc("/v1/trigger-reverse", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusMethodNotAllowed)
 			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
 			return
 		}
-		cfg := issuer_reverse.DefaultClientConfig()
-		req := issuer_reverse.SampleRequest()
-		resp, statusCode, respHeaders, err := issuer_reverse.ReverseXC(cfg, req)
+		cfg := issuer_payments_reverse.DefaultClientConfig()
+		req := issuer_payments_reverse.SampleRequest()
+		resp, statusCode, err := issuer_payments_reverse.Reverse(cfg, req)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
@@ -124,25 +124,17 @@ func main() {
 			})
 			return
 		}
-		log.Printf("[trigger-reverse-xc] --- Response headers ---")
-		for k, v := range respHeaders {
-			log.Printf("[trigger-reverse-xc]   %s: %s", k, v)
-		}
-		respJSON, _ := json.MarshalIndent(resp, "", "  ")
-		log.Printf("[trigger-reverse-xc] --- Response body ---\n%s", string(respJSON))
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(map[string]interface{}{
-			"ok":              true,
-			"http_status":     statusCode,
-			"response_header": respHeaders,
-			"response":        resp,
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
 		})
 	})
 
 	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
 	http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
-	http.HandleFunc("/webhooks/v3/payments/reverse", issuer_reverse.Handler)
 	http.HandleFunc("/webhook/v3/account-lookup", printRequest)
 	http.HandleFunc("/webhooks/v3/admin/event", printRequest)
 
