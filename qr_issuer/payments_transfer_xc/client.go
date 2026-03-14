@@ -54,7 +54,7 @@ func SampleRequest() TransferRequest {
 			// TransactionId:     bmid,
 			TransactionId:     "20260314MBBEMYKL030OQR00057310",
 			BusinessMessageId: bmid,
-			CreationDateTime:  "2026-03-14T00:30:00.000+08:00",
+			CreationDateTime:  "2026-03-14T16:31:51.199+08:00",
 		},
 		InterbankSettlementAmount: InterbankSettlementAmount{
 			Value:    DecimalAmount(10.00),
