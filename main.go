@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"example.com/sample-repo/network_admin/event_notification"
 	"example.com/sample-repo/network_admin/echo"
 	"example.com/sample-repo/network_admin/sign_off"
 	"example.com/sample-repo/network_admin/sign_on"
@@ -256,7 +257,7 @@ func main() {
 	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
 	http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
 	http.HandleFunc("/webhook/v3/account-lookup", printRequest)
-	http.HandleFunc("/webhooks/v3/admin/event", printRequest)
+	http.HandleFunc("/webhooks/v3/admin/event", event_notification.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
