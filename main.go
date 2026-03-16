@@ -259,7 +259,6 @@ func main() {
 	http.HandleFunc("/pg-router/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
 	http.HandleFunc("/pg-router/webhooks/v3/account-lookup", printRequest)
 	http.HandleFunc("/pg-router/webhooks/v3/admin/event", event_notification.Handler)
-	http.HandleFunc("/pg-router/webhooks/v3/admin/event", event_notification.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
