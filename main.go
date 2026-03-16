@@ -2,8 +2,13 @@ package main
 
 import (
 	"encoding/json"
-	"example.com/sample-repo/network_admin/event_notification"
+	"fmt"
+	"io"
+	"log"
+	"net/http"
+
 	"example.com/sample-repo/network_admin/echo"
+	"example.com/sample-repo/network_admin/event_notification"
 	"example.com/sample-repo/network_admin/sign_off"
 	"example.com/sample-repo/network_admin/sign_on"
 	"example.com/sample-repo/qr_acquirer/account_enquire_xc"
@@ -12,10 +17,6 @@ import (
 	issuer_enquire_trx "example.com/sample-repo/qr_issuer/enquire_trx"
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
-	"fmt"
-	"io"
-	"log"
-	"net/http"
 )
 
 func printRequest(w http.ResponseWriter, r *http.Request) {
@@ -36,7 +37,7 @@ func printRequest(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	http.HandleFunc("/v1/hello", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/pg-router/v1/hello", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		w.Write([]byte("hello world jj"))
 	})
@@ -253,11 +254,11 @@ func main() {
 		})
 	})
 
-	http.HandleFunc("/webhook/v2/account-lookup", printRequest)
-	http.HandleFunc("/webhooks/v3/accounts/enquire-xc", account_enquire_xc.Handler)
-	http.HandleFunc("/webhooks/v3/payments/transfer-xc", payments_transfer_xc.Handler)
-	http.HandleFunc("/webhook/v3/account-lookup", printRequest)
-	http.HandleFunc("/webhooks/v3/admin/event", event_notification.Handler)
+	http.HandleFunc("/pg-router/webhook/v2/account-lookup", printRequest)
+	http.HandleFunc("/pg-router/webhook/v3/accounts/enquire-xc", account_enquire_xc.Handler)
+	http.HandleFunc("/pg-router/webhook/v3/payments/transfer-xc", payments_transfer_xc.Handler)
+	http.HandleFunc("/pg-router/webhook/v3/account-lookup", printRequest)
+	http.HandleFunc("/pg-router/webhook/v3/admin/event", event_notification.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
