@@ -21,6 +21,7 @@ import (
 	get_bank_list "example.com/sample-repo/qr_pay/one_time_payment/get_bank_list"
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
+	retreive_checkout_payment_status "example.com/sample-repo/qr_pay/one_time_payment/retreive_checkout_payment_status"
 )
 
 func printRequest(w http.ResponseWriter, r *http.Request) {
@@ -359,6 +360,39 @@ func main() {
 		}
 		cfg := enquire_checkout.DefaultClientConfig()
 		resp, statusCode, err := enquire_checkout.EnquireCheckout(cfg, endToEndId)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-retrieve-checkout-payment-status — calls PayNet DuitNow Pay GET /v1/bw/rtp?checkoutId=... (Enquire Payment Status).
+	// Optional query param: checkoutId (defaults to sample value from API spec). Rate limit: once every 30 seconds per transaction.
+	http.HandleFunc("/v1/duitnowpay/trigger-retrieve-checkout-payment-status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		checkoutId := r.URL.Query().Get("checkoutId")
+		if checkoutId == "" {
+			checkoutId = retreive_checkout_payment_status.SampleCheckoutId()
+		}
+		cfg := retreive_checkout_payment_status.DefaultClientConfig()
+		resp, statusCode, err := retreive_checkout_payment_status.RetrievePaymentStatus(cfg, checkoutId)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
