@@ -23,6 +23,7 @@ import (
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
 	retreive_checkout_payment_status "example.com/sample-repo/qr_pay/one_time_payment/retreive_checkout_payment_status"
+	save_payment_method "example.com/sample-repo/qr_pay/saving_payment_and_consent/save_payment_method"
 	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
 	webhook_update_payment_status "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_payment_status"
 )
@@ -273,6 +274,35 @@ func main() {
 		cfg := payment_intent.DefaultClientConfig()
 		req := payment_intent.SampleRequest()
 		resp, statusCode, err := payment_intent.CreatePaymentIntent(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-save-payment-method — calls PayNet DuitNow Pay POST /v1/payment/intent with dataType "02" (Save Payment Method - DuitNow Consent).
+	http.HandleFunc("/v1/duitnowpay/trigger-save-payment-method", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := save_payment_method.DefaultClientConfig()
+		req := save_payment_method.SampleRequest()
+		resp, statusCode, err := save_payment_method.CreateSavePaymentMethod(cfg, req)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
