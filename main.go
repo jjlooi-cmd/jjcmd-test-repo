@@ -423,6 +423,7 @@ func main() {
 	// DuitNow Pay Webhook: Update Checkout Details — maps endToEndId to checkoutId for redirect reconciliation.
 	http.HandleFunc("/pg-router/v1/payments/callback/RPP/MY/Notification/PaymentStatus/bw/notification/rtp-ct", webhook_update_checkout_details.Handler)
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/reject", webhook_update_payment_status.Handler)
+	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/success", webhook_update_payment_status.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
