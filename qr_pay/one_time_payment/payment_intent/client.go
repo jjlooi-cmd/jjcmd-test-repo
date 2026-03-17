@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"strings"
 
+	"example.com/sample-repo/qr_pay/common_header"
 	"example.com/sample-repo/qr_pay/jwt_generation"
 )
 
@@ -103,6 +104,7 @@ func CreatePaymentIntent(cfg ClientConfig, req PaymentIntentRequest) (*PaymentIn
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Authorization", "Bearer "+token)
+	common_header.ApplyToRequest(httpReq, common_header.Default())
 
 	log.Printf("[payment_intent] --- Outgoing request to PayNet ---")
 	log.Printf("[payment_intent] Method: %s URL: %s", httpReq.Method, httpReq.URL.String())
