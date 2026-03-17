@@ -17,6 +17,7 @@ import (
 	issuer_enquire_trx "example.com/sample-repo/qr_issuer/enquire_trx"
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
+	get_bank_list "example.com/sample-repo/qr_pay/one_time_payment/get_bank_list"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
 )
 
@@ -266,6 +267,34 @@ func main() {
 		cfg := payment_intent.DefaultClientConfig()
 		req := payment_intent.SampleRequest()
 		resp, statusCode, err := payment_intent.CreatePaymentIntent(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-get-bank-list — calls PayNet DuitNow Pay GET /v2/bw/banks (bank list).
+	http.HandleFunc("/v1/duitnowpay/trigger-get-bank-list", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := get_bank_list.DefaultClientConfig()
+		resp, statusCode, err := get_bank_list.GetBankList(cfg)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)

@@ -13,6 +13,9 @@ import (
 	"example.com/sample-repo/qr_pay/jwt_generation"
 )
 
+// API Documentation:
+// https://docs.developer.paynet.my/docs/duitnow-pay/integration/paynet-hosted-page/payment-intent
+
 // ClientConfig holds configuration for the PayNet DuitNow Pay payment intent client.
 type ClientConfig struct {
 	// BaseURL is the PayNet DuitNow Pay API base URL (e.g. https://certification.api.developer.inet.paynet.my). Path /v1/payment/intent is appended.

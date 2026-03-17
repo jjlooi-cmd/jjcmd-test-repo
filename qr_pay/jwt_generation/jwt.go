@@ -87,7 +87,7 @@ func GenerateJWT(opts GenerateOptions) (string, error) {
 	headerB64 := base64.RawURLEncoding.EncodeToString(headerJSON)
 
 	// 2. JWT claims: exp, iss, sub, jti, key, data (per PayNet Pay API Authentication); iat optional per sample generators.
-	// data = request payload in body format (object). Use json.RawMessage(bodyBytes) so it is byte-identical to the HTTP body.
+	// data = request payload in body format. Omit for GET (no body); use json.RawMessage(bodyBytes) for POST so it matches the HTTP body.
 	body := map[string]interface{}{
 		"iat":  now,
 		"exp":  exp,
@@ -95,7 +95,9 @@ func GenerateJWT(opts GenerateOptions) (string, error) {
 		"sub":  opts.Subject,
 		"jti":  opts.JTI,
 		"key":  opts.Key,
-		"data": opts.Data,
+	}
+	if opts.Data != nil {
+		body["data"] = opts.Data
 	}
 	bodyJSON, err := json.Marshal(body)
 	if err != nil {
