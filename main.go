@@ -18,6 +18,7 @@ import (
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
 	enquire_checkout "example.com/sample-repo/qr_pay/one_time_payment/enquire_checkout"
+	enquire_payment_status_v2 "example.com/sample-repo/qr_pay/one_time_payment/enquire_payment_status_v2"
 	get_bank_list "example.com/sample-repo/qr_pay/one_time_payment/get_bank_list"
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
@@ -395,6 +396,43 @@ func main() {
 		}
 		cfg := retreive_checkout_payment_status.DefaultClientConfig()
 		resp, statusCode, err := retreive_checkout_payment_status.RetrievePaymentStatus(cfg, checkoutId)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-enquire-payment-status-v2 — calls PayNet DuitNow Pay GET /v2/bw/checkout-status?paymentMethod=01&checkoutId=... (Enquire Payment Status v2).
+	// Optional query params: paymentMethod (default "01"), checkoutId (defaults to sample value). Rate limit: once every 30 seconds per transaction.
+	http.HandleFunc("/v1/duitnowpay/trigger-enquire-payment-status-v2", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		paymentMethod := r.URL.Query().Get("paymentMethod")
+		if paymentMethod == "" {
+			paymentMethod = enquire_payment_status_v2.PaymentMethodOneTime
+		}
+		checkoutId := r.URL.Query().Get("checkoutId")
+		if checkoutId == "" {
+			checkoutId = enquire_payment_status_v2.SampleCheckoutId()
+		}
+		cfg := enquire_payment_status_v2.DefaultClientConfig()
+		resp, statusCode, err := enquire_payment_status_v2.EnquirePaymentStatusV2(cfg, paymentMethod, checkoutId)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
