@@ -17,6 +17,7 @@ import (
 	issuer_enquire_trx "example.com/sample-repo/qr_issuer/enquire_trx"
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
+	enquire_checkout "example.com/sample-repo/qr_pay/one_time_payment/enquire_checkout"
 	get_bank_list "example.com/sample-repo/qr_pay/one_time_payment/get_bank_list"
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
@@ -325,6 +326,39 @@ func main() {
 		}
 		cfg := get_bank_list.DefaultClientConfig()
 		resp, statusCode, err := get_bank_list.GetBankList(cfg)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-enquire-checkout — calls PayNet DuitNow Pay GET /v1/bw/checkout?endToEndId=... (Enquire Checkout Details).
+	// Optional query param: endToEndId (defaults to sample value from API spec).
+	http.HandleFunc("/v1/duitnowpay/trigger-enquire-checkout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		endToEndId := r.URL.Query().Get("endToEndId")
+		if endToEndId == "" {
+			endToEndId = enquire_checkout.SampleEndToEndId()
+		}
+		cfg := enquire_checkout.DefaultClientConfig()
+		resp, statusCode, err := enquire_checkout.EnquireCheckout(cfg, endToEndId)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
