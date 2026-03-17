@@ -18,6 +18,7 @@ import (
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
 	get_bank_list "example.com/sample-repo/qr_pay/one_time_payment/get_bank_list"
+	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
 )
 
@@ -267,6 +268,35 @@ func main() {
 		cfg := payment_intent.DefaultClientConfig()
 		req := payment_intent.SampleRequest()
 		resp, statusCode, err := payment_intent.CreatePaymentIntent(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-initiate-checkout — calls PayNet DuitNow Pay POST /v1/bw/checkout (self-hosted page initiate checkout).
+	http.HandleFunc("/v1/duitnowpay/trigger-initiate-checkout", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := initiate_checkout.DefaultClientConfig()
+		req := initiate_checkout.SampleRequest()
+		resp, statusCode, err := initiate_checkout.InitiateCheckout(cfg, req)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
