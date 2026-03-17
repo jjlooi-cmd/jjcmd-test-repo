@@ -45,7 +45,8 @@ type GenerateOptions struct {
 }
 
 // GenerateJWT builds a JWT token for a PayNet DuitNow Pay API request.
-// Claims: exp, iss, sub, jti, key, data. Place the result in the Authorization header as: "Bearer <token>".
+// Logic matches the doc's JavaScript sample: jwt.sign({ data, key }, privateKey, { algorithm: 'RS256', expiresIn, issuer, subject, jwtid }).
+// Claims: iat, exp, iss, sub, jti, key, data. Place the result in the Authorization header as: "Bearer <token>".
 func GenerateJWT(opts GenerateOptions) (string, error) {
 	if opts.PrivateKey == nil {
 		return "", fmt.Errorf("jwt: private key is required")
@@ -54,7 +55,7 @@ func GenerateJWT(opts GenerateOptions) (string, error) {
 		opts.Algorithm = RS256
 	}
 	if opts.ValidDuration == 0 {
-		opts.ValidDuration = 1 * time.Hour
+		opts.ValidDuration = 45 * time.Minute
 	}
 	if opts.Issuer == "" {
 		opts.Issuer = "MBBEMYKL"

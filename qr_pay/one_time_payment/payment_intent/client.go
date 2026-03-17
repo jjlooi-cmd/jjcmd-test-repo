@@ -108,6 +108,10 @@ func CreatePaymentIntent(cfg ClientConfig, req PaymentIntentRequest) (*PaymentIn
 
 	log.Printf("[payment_intent] --- Outgoing request to PayNet ---")
 	log.Printf("[payment_intent] Method: %s URL: %s", httpReq.Method, httpReq.URL.String())
+	log.Printf("[payment_intent] Headers:")
+	for k, v := range httpReq.Header {
+		log.Printf("[payment_intent]   %s: %s", k, strings.Join(v, ", "))
+	}
 	bodyIndent, _ := json.MarshalIndent(req, "", "  ")
 	log.Printf("[payment_intent] Body:\n%s", string(bodyIndent))
 	log.Printf("[payment_intent] -----------------------------------------")
