@@ -70,11 +70,9 @@ func CreatePaymentIntent(cfg ClientConfig, req PaymentIntentRequest) (*PaymentIn
 		return nil, 0, fmt.Errorf("load private key for JWT: %w", err)
 	}
 
-	// JWT "data" claim must be the request payload. Use the same JSON as body.
-	var dataClaim interface{}
-	if err := json.Unmarshal(bodyBytes, &dataClaim); err != nil {
-		return nil, 0, fmt.Errorf("unmarshal for data claim: %w", err)
-	}
+	// JWT "data" claim must match the request body exactly (PayNet may compare).
+	// Pass the same bytes as json.RawMessage so the JWT "data" is byte-identical to the HTTP body.
+	dataClaim := json.RawMessage(bodyBytes)
 
 	jti := strings.TrimSpace(req.CheckoutID)
 	if jti == "" {

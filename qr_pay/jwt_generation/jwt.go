@@ -65,6 +65,7 @@ func GenerateJWT(opts GenerateOptions) (string, error) {
 	}
 	if opts.JTI == "" {
 		opts.JTI = "550e8400-e29b-41d4-a716-446655440000"
+		// opts.JTI = uuid.New().String()
 	}
 	if opts.Key == "" {
 		opts.Key = "A46548895"
@@ -73,7 +74,8 @@ func GenerateJWT(opts GenerateOptions) (string, error) {
 	now := time.Now().Unix()
 	exp := time.Now().Add(opts.ValidDuration).Unix()
 
-	// 1. JWT header: alg, typ
+	// 1. JWT header (first segment of token, same as JS: algorithm + typ).
+	// Token format = base64url(header).base64url(payload).base64url(signature)
 	header := map[string]string{
 		"alg": string(opts.Algorithm),
 		"typ": "JWT",
@@ -85,6 +87,7 @@ func GenerateJWT(opts GenerateOptions) (string, error) {
 	headerB64 := base64.RawURLEncoding.EncodeToString(headerJSON)
 
 	// 2. JWT claims: exp, iss, sub, jti, key, data (per PayNet Pay API Authentication); iat optional per sample generators.
+	// data = request payload in body format (object). Use json.RawMessage(bodyBytes) so it is byte-identical to the HTTP body.
 	body := map[string]interface{}{
 		"iat":  now,
 		"exp":  exp,
