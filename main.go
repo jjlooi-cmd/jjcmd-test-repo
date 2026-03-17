@@ -22,6 +22,7 @@ import (
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
 	retreive_checkout_payment_status "example.com/sample-repo/qr_pay/one_time_payment/retreive_checkout_payment_status"
+	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
 )
 
 func printRequest(w http.ResponseWriter, r *http.Request) {
@@ -419,6 +420,9 @@ func main() {
 	http.HandleFunc("/webhooks/v3/admin/event", event_notification.Handler)
 	http.HandleFunc("/pg-router/v1/payments/callback/RPP/MY/Notification/PaymentStatus/bw/notification/rtp-ct", printRequest)
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP", printRequest)
+
+	// DuitNow Pay Webhook: Update Checkout Details — maps endToEndId to checkoutId for redirect reconciliation.
+	http.HandleFunc("/pg-router/rpp/v1/bw/notification/details", webhook_update_checkout_details.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
