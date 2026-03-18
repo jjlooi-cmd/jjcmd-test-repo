@@ -28,6 +28,7 @@ import (
 	save_payment_method "example.com/sample-repo/qr_pay/saving_payment_and_consent/save_payment_method"
 	terminate_consent "example.com/sample-repo/qr_pay/saving_payment_and_consent/terminate_consent"
 	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
+	webhook_update_consent_details "example.com/sample-repo/qr_pay/saving_payment_and_consent/webhook_update_consent_details"
 	webhook_update_payment_status "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_payment_status"
 )
 
@@ -613,6 +614,9 @@ func main() {
 	http.HandleFunc("/pg-router/v1/payments/callback/RPP/MY/Notification/PaymentStatus/bw/notification/rtp-ct", webhook_update_checkout_details.Handler)
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/reject", webhook_update_payment_status.Handler)
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/success", webhook_update_payment_status.Handler)
+
+	// DuitNow Pay Webhook: Update Consent Details — notifies acquirer when save payment method (consent) is authorized.
+	http.HandleFunc("/pg-router/v1/duitnowpay/consent-notification", webhook_update_consent_details.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
