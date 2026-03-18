@@ -17,20 +17,23 @@ import (
 	issuer_enquire_trx "example.com/sample-repo/qr_issuer/enquire_trx"
 	issuer_payments_reverse "example.com/sample-repo/qr_issuer/payments_reverse"
 	issuer_transfer "example.com/sample-repo/qr_issuer/payments_transfer_xc"
+	auto_debit "example.com/sample-repo/qr_pay/auto_debit/auto_debit"
 	enquire_checkout "example.com/sample-repo/qr_pay/one_time_payment/enquire_checkout"
 	enquire_payment_status_v2 "example.com/sample-repo/qr_pay/one_time_payment/enquire_payment_status_v2"
 	get_bank_list "example.com/sample-repo/qr_pay/one_time_payment/get_bank_list"
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
 	retreive_checkout_payment_status "example.com/sample-repo/qr_pay/one_time_payment/retreive_checkout_payment_status"
+	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
+	webhook_update_payment_status "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_payment_status"
 	initiate_consent "example.com/sample-repo/qr_pay/saving_payment_and_consent/initiate_consent"
 	payment_method_status "example.com/sample-repo/qr_pay/saving_payment_and_consent/payment_method_status"
+	refund "example.com/sample-repo/qr_pay/refund/refund"
+	enquire_refund "example.com/sample-repo/qr_pay/refund/enquire_refund"
+	webhook_update_refund_status "example.com/sample-repo/qr_pay/refund/webhook_update_refund_status"
 	save_payment_method "example.com/sample-repo/qr_pay/saving_payment_and_consent/save_payment_method"
 	terminate_consent "example.com/sample-repo/qr_pay/saving_payment_and_consent/terminate_consent"
-	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
 	consent_checkout_webhook "example.com/sample-repo/qr_pay/saving_payment_and_consent/webhook_update_checkout_details"
-	webhook_update_consent_status "example.com/sample-repo/qr_pay/saving_payment_and_consent/webhook_update_consent_status"
-	webhook_update_payment_status "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_payment_status"
 )
 
 func printRequest(w http.ResponseWriter, r *http.Request) {
@@ -411,6 +414,108 @@ func main() {
 		})
 	})
 
+	// GET /v1/duitnowpay/trigger-refund — calls PayNet DuitNow Pay POST /v1/bw/refund (Initiate Payment Refund).
+	http.HandleFunc("/v1/duitnowpay/trigger-refund", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := refund.DefaultClientConfig()
+		req := refund.SampleRequest()
+		resp, statusCode, err := refund.InitiateRefund(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-enquire-refund — calls PayNet DuitNow Pay GET /v1/bw/refund?refundId=... (Enquire Refund Status).
+	// Optional query param: refundId (defaults to sample value from API spec). Perform at least one hour after initial refund request.
+	http.HandleFunc("/v1/duitnowpay/trigger-enquire-refund", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		refundId := r.URL.Query().Get("refundId")
+		if refundId == "" {
+			refundId = enquire_refund.SampleRefundId()
+		}
+		cfg := enquire_refund.DefaultClientConfig()
+		resp, statusCode, err := enquire_refund.EnquireRefundStatus(cfg, refundId)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-autodebit — calls PayNet DuitNow Pay POST /v1/bw/autodebit (Initiate DuitNow AutoDebit).
+	// Optional query params: checkoutId, consentId, amount (default to sample values from API spec when omitted).
+	http.HandleFunc("/v1/duitnowpay/trigger-autodebit", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		q := r.URL.Query()
+		req := auto_debit.SampleRequest()
+		if v := q.Get("checkoutId"); v != "" {
+			req.CheckoutID = v
+		}
+		if v := q.Get("consentId"); v != "" {
+			req.ConsentID = v
+		}
+		if v := q.Get("amount"); v != "" {
+			req.Amount = v
+		}
+		cfg := auto_debit.DefaultClientConfig()
+		resp, statusCode, err := auto_debit.InitiateAutoDebit(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
 	// GET /v1/duitnowpay/trigger-terminate-consent — calls PayNet DuitNow Pay DELETE /v1/bw/consent?consentId=... (Terminate Consent).
 	// Optional query param: consentId (defaults to sample value from API spec).
 	http.HandleFunc("/v1/duitnowpay/trigger-terminate-consent", func(w http.ResponseWriter, r *http.Request) {
@@ -618,8 +723,8 @@ func main() {
 
 	// DuitNow Pay Webhook: Update Checkout Details (consent flow) — maps consentEndToEndId to checkoutId for redirect reconciliation.
 	http.HandleFunc("/pg-router/v1/duitnowpay/consent-notification", consent_checkout_webhook.Handler)
-	// DuitNow Pay Webhook: Update Consent Details — notifies acquirer when save payment method (consent) is authorized.
-	http.HandleFunc("/pg-router/v1/duitnowpay/consent-status-notification", webhook_update_consent_status.Handler)
+	// DuitNow Pay Webhook: Update Refund Status — notifies acquirer with final refund status once processing is complete.
+	http.HandleFunc("/pg-router/v1/duitnowpay/refund", webhook_update_refund_status.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
