@@ -23,7 +23,10 @@ import (
 	initiate_checkout "example.com/sample-repo/qr_pay/one_time_payment/initiate_checkout"
 	payment_intent "example.com/sample-repo/qr_pay/one_time_payment/payment_intent"
 	retreive_checkout_payment_status "example.com/sample-repo/qr_pay/one_time_payment/retreive_checkout_payment_status"
+	initiate_consent "example.com/sample-repo/qr_pay/saving_payment_and_consent/initiate_consent"
+	payment_method_status "example.com/sample-repo/qr_pay/saving_payment_and_consent/payment_method_status"
 	save_payment_method "example.com/sample-repo/qr_pay/saving_payment_and_consent/save_payment_method"
+	terminate_consent "example.com/sample-repo/qr_pay/saving_payment_and_consent/terminate_consent"
 	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
 	webhook_update_payment_status "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_payment_status"
 )
@@ -292,6 +295,91 @@ func main() {
 		})
 	})
 
+	// GET /v1/duitnowpay/trigger-initiate-consent — calls PayNet DuitNow Pay POST /v1/bw/consent (Initiate Consent - self-hosted save payment method).
+	http.HandleFunc("/v1/duitnowpay/trigger-initiate-consent", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := initiate_consent.DefaultClientConfig()
+		req := initiate_consent.SampleRequest()
+		resp, statusCode, err := initiate_consent.InitiateConsent(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-payment-method-status — PayNet DuitNow Pay: Enquire Payment Method Status or Enquire Payment Method Details.
+	// Query params: checkoutId → GET /v1/bw/consent/request?checkoutId=... (status). consentId → GET /v1/bw/consent?consentId=... (details).
+	// If consentId is provided it takes precedence; otherwise checkoutId is used (defaults to sample). Status API rate limit: once every 30s per transaction.
+	http.HandleFunc("/v1/duitnowpay/trigger-payment-method-status", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		cfg := payment_method_status.DefaultClientConfig()
+		w.Header().Set("Content-Type", "application/json")
+
+		consentId := r.URL.Query().Get("consentId")
+		if consentId != "" {
+			resp, statusCode, err := payment_method_status.GetPaymentMethodDetails(cfg, consentId)
+			if err != nil {
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(map[string]interface{}{
+					"ok":          false,
+					"error":       err.Error(),
+					"http_status": statusCode,
+				})
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          true,
+				"http_status": statusCode,
+				"response":    resp,
+			})
+			return
+		}
+
+		checkoutId := r.URL.Query().Get("checkoutId")
+		if checkoutId == "" {
+			checkoutId = payment_method_status.SampleCheckoutId()
+		}
+		resp, statusCode, err := payment_method_status.GetPaymentMethodStatus(cfg, checkoutId)
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
 	// GET /v1/duitnowpay/trigger-save-payment-method — calls PayNet DuitNow Pay POST /v1/payment/intent with dataType "02" (Save Payment Method - DuitNow Consent).
 	http.HandleFunc("/v1/duitnowpay/trigger-save-payment-method", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -303,6 +391,39 @@ func main() {
 		cfg := save_payment_method.DefaultClientConfig()
 		req := save_payment_method.SampleRequest()
 		resp, statusCode, err := save_payment_method.CreateSavePaymentMethod(cfg, req)
+		w.Header().Set("Content-Type", "application/json")
+		if err != nil {
+			w.WriteHeader(http.StatusOK)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"ok":          false,
+				"error":       err.Error(),
+				"http_status": statusCode,
+			})
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"ok":          true,
+			"http_status": statusCode,
+			"response":    resp,
+		})
+	})
+
+	// GET /v1/duitnowpay/trigger-terminate-consent — calls PayNet DuitNow Pay DELETE /v1/bw/consent?consentId=... (Terminate Consent).
+	// Optional query param: consentId (defaults to sample value from API spec).
+	http.HandleFunc("/v1/duitnowpay/trigger-terminate-consent", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "GET required"})
+			return
+		}
+		consentId := r.URL.Query().Get("consentId")
+		if consentId == "" {
+			consentId = terminate_consent.SampleConsentId()
+		}
+		cfg := terminate_consent.DefaultClientConfig()
+		resp, statusCode, err := terminate_consent.TerminateConsent(cfg, consentId)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
 			w.WriteHeader(http.StatusOK)
