@@ -1,4 +1,4 @@
-package webhook_update_consent_details
+package webhook_update_consent_status
 
 // UpdateConsentDetailsRequest is the request body for the PayNet Webhook: Update Consent Details.
 // This webhook updates the acquirer when a save payment method is initiated. It returns the consentId with the status.
