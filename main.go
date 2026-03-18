@@ -616,7 +616,7 @@ func main() {
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/success", webhook_update_payment_status.Handler)
 
 	// DuitNow Pay Webhook: Update Consent Details — notifies acquirer when save payment method (consent) is authorized.
-	http.HandleFunc("/pg-router/v1/duitnowpay/consent-notification", webhook_update_consent_details.Handler)
+	http.HandleFunc("/pg-router/v1/duitnowpay/consent-status-notification", webhook_update_consent_details.Handler)
 
 	log.Fatal(http.ListenAndServe(":8081", nil))
 }
