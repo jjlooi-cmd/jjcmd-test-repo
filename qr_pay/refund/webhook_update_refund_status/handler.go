@@ -58,69 +58,69 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("[webhook_update_refund_status] Body:\n%s", string(bodyBytes))
 	log.Printf("[webhook_update_refund_status] ------------------------")
 
-	if strings.TrimSpace(req.RefundId) == "" {
-		log.Printf("[webhook_update_refund_status] missing refundId")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "refundId is required"})
-		return
-	}
-	if strings.TrimSpace(req.CheckoutId) == "" {
-		log.Printf("[webhook_update_refund_status] missing checkoutId")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "checkoutId is required"})
-		return
-	}
-	if strings.TrimSpace(req.EndToEndId) == "" {
-		log.Printf("[webhook_update_refund_status] missing endToEndId")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "endToEndId is required"})
-		return
-	}
-	if strings.TrimSpace(req.PaymentStatus.Code) == "" {
-		log.Printf("[webhook_update_refund_status] missing paymentStatus.code")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentStatus.code is required"})
-		return
-	}
-	if strings.TrimSpace(req.PaymentStatus.Substate) == "" {
-		log.Printf("[webhook_update_refund_status] missing paymentStatus.substate")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentStatus.substate is required"})
-		return
-	}
-	if strings.TrimSpace(req.PaymentStatus.Message) == "" {
-		log.Printf("[webhook_update_refund_status] missing paymentStatus.message")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentStatus.message is required"})
-		return
-	}
-	if strings.TrimSpace(req.Issuer) == "" {
-		log.Printf("[webhook_update_refund_status] missing issuer")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "issuer is required"})
-		return
-	}
-	if strings.TrimSpace(req.PaymentMethod) == "" {
-		log.Printf("[webhook_update_refund_status] missing paymentMethod")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentMethod is required"})
-		return
-	}
-	if strings.TrimSpace(req.Amount) == "" {
-		log.Printf("[webhook_update_refund_status] missing amount")
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		_ = json.NewEncoder(w).Encode(map[string]string{"error": "amount is required"})
-		return
-	}
+	// if strings.TrimSpace(req.RefundId) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing refundId")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "refundId is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.CheckoutId) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing checkoutId")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "checkoutId is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.EndToEndId) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing endToEndId")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "endToEndId is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.PaymentStatus.Code) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing paymentStatus.code")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentStatus.code is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.PaymentStatus.Substate) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing paymentStatus.substate")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentStatus.substate is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.PaymentStatus.Message) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing paymentStatus.message")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentStatus.message is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.Issuer) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing issuer")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "issuer is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.PaymentMethod) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing paymentMethod")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "paymentMethod is required"})
+	// 	return
+	// }
+	// if strings.TrimSpace(req.Amount) == "" {
+	// 	log.Printf("[webhook_update_refund_status] missing amount")
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	w.WriteHeader(http.StatusBadRequest)
+	// 	_ = json.NewEncoder(w).Encode(map[string]string{"error": "amount is required"})
+	// 	return
+	// }
 
 	// Acquirer business logic: e.g. persist refund status, update order state, notify user.
 	// Replace with your storage or downstream processing.
