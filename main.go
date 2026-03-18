@@ -28,6 +28,7 @@ import (
 	save_payment_method "example.com/sample-repo/qr_pay/saving_payment_and_consent/save_payment_method"
 	terminate_consent "example.com/sample-repo/qr_pay/saving_payment_and_consent/terminate_consent"
 	webhook_update_checkout_details "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_checkout_details"
+	consent_checkout_webhook "example.com/sample-repo/qr_pay/saving_payment_and_consent/webhook_update_checkout_details"
 	webhook_update_consent_status "example.com/sample-repo/qr_pay/saving_payment_and_consent/webhook_update_consent_status"
 	webhook_update_payment_status "example.com/sample-repo/qr_pay/one_time_payment/webhook_update_payment_status"
 )
@@ -615,6 +616,8 @@ func main() {
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/reject", webhook_update_payment_status.Handler)
 	http.HandleFunc("/pg-router/v1/payments/redirect/obw/RPP/MY/Redirect/RTP/success", webhook_update_payment_status.Handler)
 
+	// DuitNow Pay Webhook: Update Checkout Details (consent flow) — maps consentEndToEndId to checkoutId for redirect reconciliation.
+	http.HandleFunc("/pg-router/v1/duitnowpay/consent-notification", consent_checkout_webhook.Handler)
 	// DuitNow Pay Webhook: Update Consent Details — notifies acquirer when save payment method (consent) is authorized.
 	http.HandleFunc("/pg-router/v1/duitnowpay/consent-status-notification", webhook_update_consent_status.Handler)
 
